@@ -5,6 +5,8 @@ setup(
     version='0.1.0',
     packages=find_packages(include=['auchann', 'auchann.*']),
     install_requires=[
-        'chamd'
+        'chamd',
+        'editdistance',
+        'numpy'
         ]
 )
