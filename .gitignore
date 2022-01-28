@@ -130,3 +130,6 @@ dmypy.json
 
 # Folder with chat files
 chafiles/
+CHILDES_Replacement_Data/
+OtherMaterials/
+test/
