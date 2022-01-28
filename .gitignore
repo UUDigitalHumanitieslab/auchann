@@ -132,4 +132,4 @@ dmypy.json
 chafiles/
 CHILDES_Replacement_Data/
 OtherMaterials/
-test/
+test-local/
