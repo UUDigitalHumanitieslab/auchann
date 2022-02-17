@@ -23,23 +23,27 @@ def match_word(corrected_word, counter, correction_dict, transcript_dict, transc
             """
             if several words are equally far apart from the correction, and have the same edit distance, pick the one that isn't taken yet, and otherwise default to the first one
             """
-            if len(closest_index) > 1:  # if several words are equally close to the correction word 
-                
-                if transcript_dict[(transcript[matched_index[closest_index[0]]], matched_index[closest_index[0]])] == False:  # ifthe first word is still free, match it
+            if len(closest_index) > 1:
+
+                # if the first word is still free, match it
+                if transcript_dict[(transcript[matched_index[closest_index[0]]], matched_index[closest_index[0]])] == False:
                     matched_index = matched_index[closest_index[0]]
                     return matched_index, correction_dict, transcript_dict
 
-                elif transcript_dict[(transcript[matched_index[closest_index[1]]], matched_index[closest_index[1]])] == False:  # if the second word is still free, match that
+                # if the second word is still free, match that
+                elif transcript_dict[(transcript[matched_index[closest_index[1]]], matched_index[closest_index[1]])] == False:
                     matched_index = matched_index[closest_index[1]]
                     return matched_index, correction_dict, transcript_dict
 
-                elif transcript_dict[(transcript[matched_index[closest_index[0]]], matched_index[closest_index[0]])][3] > min(distarray):  # if both are taken, but the edit distance of one is higher than the current edit distance
+                # if both are taken, but the edit distance of one is higher than the current edit distance
+                elif transcript_dict[(transcript[matched_index[closest_index[0]]], matched_index[closest_index[0]])][3] > min(distarray):
                     corrword, corrindex = transcript_dict[(transcript[matched_index[closest_index[0]]], matched_index[closest_index[0]])][1], transcript_dict[(transcript[matched_index[closest_index[0]]], matched_index[closest_index[0]])][2]
                     correction_dict[(corrword, corrindex)] = False
                     matched_index = closest_index[0]
                     return matched_index, correction_dict, transcript_dict
 
-                elif transcript_dict[(transcript[matched_index[closest_index[1]]], matched_index[closest_index[1]])][3] > min(distarray):  # if both are taken, but the edit distance of the other is higher than the current edit distance
+                 # if both are taken, but the edit distance of the other is higher than the current edit distance
+                elif transcript_dict[(transcript[matched_index[closest_index[1]]], matched_index[closest_index[1]])][3] > min(distarray):
                     corrword, corrindex = transcript_dict[(transcript[matched_index[closest_index[1]]], matched_index[closest_index[1]])][1], transcript_dict[(transcript[matched_index[closest_index[1]]], matched_index[closest_index[1]])][2]
                     correction_dict[(corrword, corrindex)] = False
                     matched_index = closest_index[0]

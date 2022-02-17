@@ -10,103 +10,17 @@ from typing import List
 from chamd import ChatReader, cleanCHILDESMD
 import re
 import yaml
+from auchann.remove_line_annotations import remove_line_annotations
+from auchann.CHAT_annotate import CHAT_annotate
 
 
-def remove_line_annotations(line: str()):
+class Spokenline:
     """
-    Removes all CHAT annotations/additions and returns the original transcript string
+    A class that contains the three versions of the transcript, i.e. the original, the correction, 
+    and the CHAT-annotated version, as well as some metadata, i.e. speaker, linenr, and corpus.
+    Contains a single line/utterance which can be converted to a dictionary to add to a yaml file.
     """
-    line = line.split()
-    replacement_line = []
-    correction_status = False  # initialize correction status
-    for item in line: 
-        if item[0] == "0":  # leave out word insertions starting with '0'
-            pass
-        elif item[0:2] == "&=":  # leave out vocalization status
-            pass
-        elif re.search(r"\(.*?\)", item):  # leave out supplements to words in brackets
-            between_brackets = re.finditer(r"\(.*?\)", item)
-            for bb in between_brackets:
-                item = item.replace(bb.group(), "")  # remove everything between brackets within an item
-            if len(item) > 0:
-                replacement_line.append(item)  # add item w/o supplements to repl_line if there is any left
-            else:
-                pass
-        elif item in ['[.]', '[?]', '[*]','[*s]','[*m]','[*gram]', '[<]', '[>]', '[!]', '[!!]', '[+bch]', '[/]', '[//]', '[///]']:  # all single-item markers between brackets
-            pass
-        elif item[0:2] in ['[:', '[=', '[#', '[%', '[+', '[-']:  # leave out corrections, guesses, and extra information, which can be spread over several items, hence the correction_status
-            correction_status = True
-        elif correction_status == True:  # if item is part of a correction, leave it out
-            if item[-1] in ["]"]:  # look for end of correction
-                correction_status = False
-        elif "@" in item:  # if special form marker, only keep item in front of it
-            item = item.split("@")[0]
-            replacement_line.append(item)
 
-        else:
-            replacement_line.append(item.strip("<>&+-"))  # strip item of '<' and '>', used to mark range of paralinguistic event
-    return(" ".join(replacement_line))
-
-
-def correct_line(line: str()):
-    """
-    Removes all CHAT annotations/additions and returns a corrected string
-    """
-    line = line.split()
-
-
-    #reader = ChatReader()
-# chat = reader.read_file('example.cha') # or read_string
-
-# for item in chat.metadata:
-#     print(item)
-# for line in chat.lines:
-#     for item in line.metadata:
-#         print(item)
-#     print(line.text)
-
-
-
-# read CHA file and convert to transcript
-# with open("chafiles/laura01.cha") as file:
-# reader = ChatReader()
-# chat = reader.read_file("chafiles/laura01.cha")
-
-#for line in chat.lines:
-    # for item in line.metadata:
-    #     print(item)
-    # print(line.text)
-
-
-def chat_lines(file):
-    """
-    Runs through lines in a chat file, filtering out extralinguistic details
-    """
-    for line in file:
-        if not line[0] in ['@', '%']:
-            transcript_line = remove_line_annotations(line)
-            correction_line = correct_line(line)
-            yield transcript_line, correction_line
-
-#Read CHA file and recreate the original transcription by replacing the CHAT annotations with the original utterances
-def remove_file_annotations(filepath, filedestinationpath):
-    ### Make a .txt,/.cha input file route
-    with open(filepath) as file:
-        transcript_name = os.path.splitext(filepath)[0].split('/')[-1]
-        if not os.path.exists(filedestinationpath):
-            os.makedirs(filedestinationpath)
-
-        with open((filedestinationpath + '/' + transcript_name + '.txt'), 'w') as newfile:
-            for line in chat_lines(file):
-                newfile.write(line[0])
-                newfile.write("\n")
-
-
-class spokenline:
-    """
-    A class that contains the three versions of the transcript, i.e. the original, the correction, and the CHAT-annotated version, as well as some metadata, i.e. speaker, linenr, and corpus
-    Contains a single line/utterance which can be converted to a dictionary to add to a yaml file
-    """
     def __init__(self, line, speaker, corpus, chat, correction, transcript):
         self.line = line
         self.speaker = speaker
@@ -114,25 +28,38 @@ class spokenline:
         self.chat = chat
         self.correction = correction
         self.transcript = transcript
-    
+
     def chat_to_transcript(self):
+        """
+        Removes CHAT annotations from a line and returns a raw transcript line
+        """
         self.transcript = remove_line_annotations(self.chat)
 
     def chat_to_correction(self):
-        self.correction = cleanCHILDESMD.cleantext(self.chat, False)  # use chamd to clean string to correction, False is to remove repititions, set to True if you want to keep repititions
+        """
+        Removes CHAT annotations from a line using chamd and returns a corrected transcript line
+        """
+        # use chamd to clean string to correction, False is to remove repititions, set to True if you want to keep repititions
+        self.correction = cleanCHILDESMD.cleantext(self.chat, False)
 
     def transcript_and_correction_to_chat(self):
-        ##placeholder
-        pass
+        """
+        Adds CHAT annotation to the raw transcript based on the corrections, returns a CHAT-annotated line
+        """
+        self.CHAT = CHAT_annotate(self.transcript, self.correction)
 
     def convert_to_dictionary(self):
+        """
+        Coverts a line to a dictionary in the yaml format, returns that line as a dictionary that tains the raw transcript,
+        correction, and CHAT-annotated line.
+        """
         yaml_dict = {
-            'meta':{
+            'meta': {
                 'line': self.line,
                 'speaker': self.speaker,
                 'corpus': self.corpus
-            }, 
-            'content':{
+            },
+            'content': {
                 'CHAT': self.chat,
                 'correction': self.correction,
                 'transcript': self.transcript
@@ -140,27 +67,22 @@ class spokenline:
         return yaml_dict
 
 
-
 def main(args=None):
     yamlfile = ""
-    ##read the yaml and match transcript to correction
+    # read the yaml and match transcript to correction
     if args is None:  # everything after 'auchann' is taken as an argument
         args = sys.argv[1:]
         try:
             yamlfile = args[0]
-        except ValueError:
-            print("Provide a .yaml file as your first argument following the correct format")
+        except IndexError:
+            print(
+                "INDEX ERROR: Provide a .yaml filepath as your first argument following the correct format")
+            exit()
 
     with open(yamlfile, 'r') as file:
-        data = yaml.load(file, Loader=yaml.FullLoader)  # loads a yaml file that contains a list of dictionaries, one for every line
+        # loads a yaml file that contains a list of dictionaries, one for every line
+        data = yaml.load(file, Loader=yaml.FullLoader)
         lines = data["lines"]
-
-        
-    
-        
-
-            
-
 
 
 if __name__ == "__main__":
