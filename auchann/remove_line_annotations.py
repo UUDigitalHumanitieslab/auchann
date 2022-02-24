@@ -1,7 +1,7 @@
 import re
 
 
-def remove_line_annotations(line: str()):
+def remove_line_annotations(line: str):
     """
     Removes all CHAT annotations/additions and returns the original transcript string
     """
