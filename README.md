@@ -1,4 +1,4 @@
-# auchann
+# AuChAnn
 
 Install requirements:
 

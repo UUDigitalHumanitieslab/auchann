@@ -3,8 +3,8 @@
 from auchann.align_words import align_words2
 
 inputs = [
-    ("dit is een test", "dit is een test"),
-    ("dit is een test", "this is een test"),
+    ("dit is ee test", "dit is een test"),
+    ("this is een test", "dit is een test"),
     ("dit is een test", "is een test"),
     ("dit uh is een test", "dit is een test"),
     ("dit is uh is is een test", "dit is een test"),

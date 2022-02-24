@@ -2,6 +2,7 @@ from tokenize import Number, Token
 from typing import List, Tuple
 from enum import Enum, unique
 from fileinput import close
+from .chat_annotate import correct_parenthesize, fillers
 import re
 import editdistance
 import numpy as np
@@ -179,6 +180,7 @@ def align_words(transcriptstring: str, correctionstring: str, transcript_dict=No
 
     return transcript_dict, correction_dict
 
+
 @unique
 class TokenOperation(Enum):
     INSERT = 1
@@ -188,28 +190,30 @@ class TokenOperation(Enum):
 
 
 class TokenCorrection:
-    insert: str
-    remove: str
+    insert: List[str]
+    remove: List[str]
     operation: TokenOperation
+    is_filler: bool
 
     def __init__(self, operation: TokenOperation, insert: str = None, remove: str = None):
         self.operation = operation
-        self.insert = insert
-        self.remove = remove
+        self.insert = [insert]
+        self.remove = [remove]
+
+        self.is_filler = operation == TokenOperation.REMOVE and remove in fillers
 
     def __str__(self):
         if self.operation == TokenOperation.COPY:
-            return self.insert
+            return ' '.join(self.insert)
         elif self.operation == TokenOperation.INSERT:
-            # TODO: group inserts
-            return f'0{self.insert}'
+            return ' '.join(f'0{insert}' for insert in self.insert)
         elif self.operation == TokenOperation.REMOVE:
-            # TODO: group removals
-            # TODO: detect repetitions
-            return f'<{self.remove}> [///]'
+            remove = ' '.join(self.remove)
+            if self.is_filler:
+                return f'&{remove}'
+            return f'<{remove}> [///]'
         elif self.operation == TokenOperation.REPLACE:
-            # TODO: various different forms of replacements
-            return f'{self.remove} [: {self.insert}]'
+            return correct_parenthesize(' '.join(self.remove), ' '.join(self.insert))
         else:
             return f'UNKNOWN OPERATION {self.operation}'
 
@@ -218,7 +222,22 @@ def align_words2(transcript: str, correction: str) -> List[TokenCorrection]:
     transcript_tokens = transcript.split()
     correction_tokens = correction.split()
     alignment, distance = align_tokens(transcript_tokens, correction_tokens)
-    return alignment
+    
+    grouped: List[TokenCorrection] = []
+    previous = None
+    for item in alignment:
+        if previous is not None:
+            if previous.operation == item.operation and  \
+            not previous.is_filler and \
+            not item.is_filler:
+                previous.insert += item.insert
+                previous.remove += item.remove
+                continue
+
+        grouped.append(item)
+        previous = item
+    return grouped
+
 
 def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> Tuple[List[TokenCorrection], int]:
     if len(transcript_tokens) == 0:
@@ -235,12 +254,11 @@ def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> 
     # OPTION 1: replacement/copy operation
     first_distance = editdistance.distance(
         transcript_tokens[0], correction_tokens[0])
-    if first_distance == 0:
-        correction = TokenCorrection(
-            TokenOperation.COPY, transcript_tokens[0], correction_tokens[0])
-    else:
-        correction = TokenCorrection(
-            TokenOperation.REPLACE, transcript_tokens[0], correction_tokens[0])
+
+    correction = TokenCorrection(
+        TokenOperation.COPY if first_distance == 0 else TokenOperation.REPLACE,
+        correction_tokens[0],
+        transcript_tokens[0])
 
     corrections, distance = align_tokens(
         transcript_tokens[1:], correction_tokens[1:])

@@ -1,8 +1,18 @@
-from auchann.align_words import align_words
 import re
 
+fillers = [
+    'eh',
+    'ehm',
+    'ah',
+    'boe',
+    'hm',
+    'hmm',
+    'uh',
+    'uhm'
+]
 
-def correct_parenthesize(original, correction):
+
+def correct_parenthesize(original: str, correction: str) -> str:
     '''
     take a string and its corrected equivalent.
     calculate the differences between the two and parenthesizes these.
@@ -66,20 +76,11 @@ def correct_parenthesize(original, correction):
         return split_whitespace
 
 
-def CHAT_annotate(transcript_dict, correction_dict):
+def chat_annotate(transcript_dict, correction_dict):
+    global fillers
     transcript_line = [key[0] for key in transcript_dict]
     correction_line = [key[0] for key in correction_dict]
     CHAT_line = []
-    fillers = [
-        'eh',
-        'ehm',
-        'ah',
-        'boe',
-        'hm',
-        'hmm',
-        'uh',
-        'uhm'
-    ]
 
     replacement_queue = []
     for key in transcript_dict:
