@@ -248,12 +248,17 @@ def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> 
             return [TokenCorrection(TokenOperation.INSERT, insert)], len(insert)
     elif len(correction_tokens) == 0:
         remove = ' '.join(transcript_tokens)
-        return [TokenCorrection(TokenOperation.REMOVE, remove)], len(remove)
+        return [TokenCorrection(TokenOperation.REMOVE, None, remove)], len(remove)
 
     # FIND THE MINIMAL DISTANCE
     # OPTION 1: replacement/copy operation
     first_distance = editdistance.distance(
         transcript_tokens[0], correction_tokens[0])
+
+    # don't allow too strong of an edit distance (prevent gibberish replacement)
+    wordlen = max(len(transcript_tokens[0]), len(correction_tokens[0]))
+    if first_distance > 0.5 * wordlen:
+        first_distance = wordlen
 
     correction = TokenCorrection(
         TokenOperation.COPY if first_distance == 0 else TokenOperation.REPLACE,
