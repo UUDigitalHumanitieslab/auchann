@@ -7,7 +7,6 @@ setup(
     install_requires=[
         'chamd',
         'editdistance',
-        'numpy',
         'pyyaml-include'
         ]
 )
