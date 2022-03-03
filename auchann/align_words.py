@@ -73,30 +73,39 @@ class TokenAlignments:
         self.corrections = corrections
         self.distance = distance
 
+    def group(self):
+        """
+        Group corrections spanning multiple tokens
+        """
+        grouped: List[TokenCorrection] = []
+        previous = None
+        for item in self.corrections:
+            if previous is not None:
+                if previous.operation == item.operation and  \
+                        not previous.is_filler and \
+                        not item.is_filler:
+                    previous.insert += item.insert
+                    previous.remove += item.remove
+                    continue
+                else:
+                    previous.next = item
+
+            grouped.append(item)
+            item.previous = previous
+            previous = item
+        self.corrections = grouped
 
 def align_words(transcript: str, correction: str) -> TokenAlignments:
     transcript_tokens = transcript.split()
     correction_tokens = correction.split()
-    alignment = align_tokens(transcript_tokens, correction_tokens)[0]
+    alignments = align_tokens(transcript_tokens, correction_tokens)
+    for alignment in alignments:
+        alignment.group()
 
-    grouped: List[TokenCorrection] = []
-    previous = None
-    for item in alignment.corrections:
-        if previous is not None:
-            if previous.operation == item.operation and  \
-                    not previous.is_filler and \
-                    not item.is_filler:
-                previous.insert += item.insert
-                previous.remove += item.remove
-                continue
-            else:
-                previous.next = item
+    # pick the alignment with the minimum number of corrections
+    alignments.sort(key=lambda alignment: len(alignment.corrections))
 
-        grouped.append(item)
-        item.previous = previous
-        previous = item
-
-    return TokenAlignments(grouped, alignment.distance)
+    return alignments[0]
 
 
 def prepend_correction(correction: TokenCorrection, distance: int, alignments: Iterable[TokenAlignments]) -> Iterable[TokenAlignments]:
@@ -120,12 +129,12 @@ def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> 
         align_insert(transcript_tokens, correction_tokens) + \
         align_remove(transcript_tokens, correction_tokens)
 
-    # alignments.sort(key=lambda alignment: alignment[1])
+    alignments.sort(key=lambda alignment: alignment.distance)
 
-    # min_distance = alignments[0][1]
-    # for alignment in list(alignments):
-    #     if alignment[1] > min_distance:
-    #         alignments.remove(alignment)
+    min_distance = alignments[0].distance
+    for alignment in list(alignments):
+        if alignment.distance > min_distance:
+            alignments.remove(alignment)
 
     return alignments
 
