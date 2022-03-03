@@ -49,7 +49,7 @@ class TokenCorrection:
                         repeat = -1
                         break
                 if repeat == 2:
-                    return f'[/]'
+                    return f'[/] {remove}'
                 elif repeat > 2:
                     return f'[x {repeat}]'
 
@@ -59,7 +59,7 @@ class TokenCorrection:
                 self.next.insert != None and \
                 self.next.insert[0].startswith(remove):
                 return f'{remove} [//]'
-            return f'<{remove}> [///]'
+            return f'<{remove}> [//]'
         elif self.operation == TokenOperation.REPLACE:
             return ' '.join(correct_parenthesize(original, correction)
                 for (original, correction) in zip(self.remove, self.insert))
