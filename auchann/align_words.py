@@ -17,13 +17,15 @@ class TokenCorrection:
     remove: List[str]
     operation: TokenOperation
     is_filler: bool
+    previous = None
+    next = None
 
-    def __init__(self, operation: TokenOperation, insert: str = None, remove: str = None):
+    def __init__(self, operation: TokenOperation, insert: List[str] = None, remove: List[str] = None):
         self.operation = operation
-        self.insert = [insert]
-        self.remove = [remove]
+        self.insert = insert or [None]
+        self.remove = remove or [None]
 
-        self.is_filler = operation == TokenOperation.REMOVE and remove in fillers
+        self.is_filler = operation == TokenOperation.REMOVE and len(remove) == 1 and remove[0] in fillers
 
     def __str__(self):
         if self.operation == TokenOperation.COPY:
@@ -34,6 +36,29 @@ class TokenCorrection:
             remove = ' '.join(self.remove)
             if self.is_filler:
                 return f'&{remove}'
+            if self.previous == None:
+                return f'{remove} [///]'
+            else:
+                # repetition e.g. "bah [x 3]"
+                repeat = 1
+                for token in self.remove:
+                    if self.previous.operation == TokenOperation.COPY and \
+                        self.previous.insert[-1] == token:
+                        repeat += 1
+                    else:
+                        repeat = -1
+                        break
+                if repeat == 2:
+                    return f'[/]'
+                elif repeat > 2:
+                    return f'[x {repeat}]'
+
+            # retracing e.g. "gi [//] gingen"
+            if self.next != None and \
+                self.next.insert and \
+                self.next.insert != None and \
+                self.next.insert[0].startswith(remove):
+                return f'{remove} [//]'
             return f'<{remove}> [///]'
         elif self.operation == TokenOperation.REPLACE:
             return ' '.join(correct_parenthesize(original, correction)
@@ -57,22 +82,25 @@ def align_words(transcript: str, correction: str) -> List[TokenCorrection]:
                 previous.insert += item.insert
                 previous.remove += item.remove
                 continue
+            else:
+                previous.next = item
 
         grouped.append(item)
+        item.previous = previous
         previous = item
     return grouped
 
 
 def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> Tuple[List[TokenCorrection], int]:
+    # don't count spaces for the length
+    # otherwise these are penalized (compared with option 1 and 2)
     if len(transcript_tokens) == 0:
         if len(correction_tokens) == 0:
             return [], 0
         else:
-            insert = ' '.join(correction_tokens)
-            return [TokenCorrection(TokenOperation.INSERT, insert)], len(insert)
+            return [TokenCorrection(TokenOperation.INSERT, correction_tokens)], len(''.join(correction_tokens))
     elif len(correction_tokens) == 0:
-        remove = ' '.join(transcript_tokens)
-        return [TokenCorrection(TokenOperation.REMOVE, None, remove)], len(remove)
+        return [TokenCorrection(TokenOperation.REMOVE, None, transcript_tokens)], len(''.join(transcript_tokens))
 
     # FIND THE MINIMAL DISTANCE
     # OPTION 1: replacement/copy operation
@@ -86,8 +114,8 @@ def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> 
 
     correction = TokenCorrection(
         TokenOperation.COPY if first_distance == 0 else TokenOperation.REPLACE,
-        correction_tokens[0],
-        transcript_tokens[0])
+        [correction_tokens[0]],
+        [transcript_tokens[0]])
 
     corrections, distance = align_tokens(
         transcript_tokens[1:], correction_tokens[1:])
@@ -100,7 +128,7 @@ def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> 
 
     if candidate_distance < distance:
         correction = TokenCorrection(
-            TokenOperation.INSERT, correction_tokens[0])
+            TokenOperation.INSERT, [correction_tokens[0]])
         corrections = candidate_corrections
         distance = candidate_distance
 
@@ -111,7 +139,7 @@ def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> 
 
     if candidate_distance < distance:
         correction = TokenCorrection(
-            TokenOperation.REMOVE, None, transcript_tokens[0])
+            TokenOperation.REMOVE, None, [transcript_tokens[0]])
         corrections = candidate_corrections
         distance = candidate_distance
 
