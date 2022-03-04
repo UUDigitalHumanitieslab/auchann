@@ -17,6 +17,7 @@ class TokenCorrection:
     remove: List[str]
     operation: TokenOperation
     is_filler: bool
+    is_fragment: bool
     previous = None
     next = None
 
@@ -28,6 +29,8 @@ class TokenCorrection:
         self.is_filler = operation == TokenOperation.REMOVE and len(
             remove) == 1 and remove[0] in fillers
 
+        self.is_fragment = operation == TokenOperation.REMOVE and len(remove[0]) == 1
+
     def __str__(self):
         if self.operation == TokenOperation.COPY:
             return ' '.join(self.insert)
@@ -37,6 +40,8 @@ class TokenCorrection:
             remove = ' '.join(self.remove)
             if self.is_filler:
                 return f'&-{remove}'
+            if self.is_fragment:
+                return f'&+{remove}'
             if self.previous == None:
                 return f'{remove} [///]'
             else:
