@@ -133,3 +133,6 @@ chafiles/
 CHILDES_Replacement_Data/
 OtherMaterials/
 test-local/
+
+# Mac DS Store
+.DS_store

@@ -32,6 +32,14 @@ def correct_parenthesize(original: str, correction: str) -> str:
     if re.search(r'\s+', correction):
         return '{} [: {}]'.format(original, correction)
 
+    # segment repetition e.g. ga-ga-gaan
+    segment_repetitions = original.split("-")[:-1]
+    if segment_repetitions and \
+        "-" not in correction and \
+        all(correction.startswith(part) for part in segment_repetitions):
+        reps = ('-'.join(segment_repetitions))
+        return f'\u21AB{reps}\u21AB{correction}'
+
     # only edits at start or end
     if original in correction:
         pattern = r'(.*)({})(.*)'.format(original)
@@ -89,7 +97,7 @@ def chat_annotate(transcript_dict, correction_dict):
     for key in transcript_dict:
         if transcript_dict[key] == False:
             if key[0] in fillers:
-                CHAT_line.append(str('&' + key[0]))
+                CHAT_line.append(str('&-' + key[0]))
             else:
                 # TEMPORARY - need to find solution still
                 CHAT_line.append(key[0])
