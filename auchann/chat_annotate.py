@@ -97,7 +97,7 @@ def chat_annotate(transcript_dict, correction_dict):
     for key in transcript_dict:
         if transcript_dict[key] == False:
             if key[0] in fillers:
-                CHAT_line.append(str('&' + key[0]))
+                CHAT_line.append(str('&-' + key[0]))
             else:
                 # TEMPORARY - need to find solution still
                 CHAT_line.append(key[0])
