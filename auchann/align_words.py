@@ -36,7 +36,7 @@ class TokenCorrection:
         elif self.operation == TokenOperation.REMOVE:
             remove = ' '.join(self.remove)
             if self.is_filler:
-                return f'&{remove}'
+                return f'&-{remove}'
             if self.previous == None:
                 return f'{remove} [///]'
             else:
