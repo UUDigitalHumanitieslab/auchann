@@ -63,6 +63,7 @@ class TokenCorrection:
             if self.next != None and \
                     self.next.insert and \
                     self.next.insert != None and \
+                    self.next.insert is str and \
                     self.next.insert[0].startswith(remove):
                 return f'{remove} [//]'
             return f'<{remove}> [//]'
