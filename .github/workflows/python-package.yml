@@ -5,9 +5,13 @@ name: Python package
 
 on:
   push:
-    branches: [ develop ]
-  pull_request:
-    branches: [ develop ]
+      branches:
+          - 'develop'
+          - 'main'
+          - 'feature/**'
+          - 'bugfix/**'
+          - 'hotfix/**'
+          - 'release/**'
   workflow_dispatch:
 
 jobs:
