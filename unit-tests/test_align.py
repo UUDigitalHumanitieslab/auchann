@@ -1,34 +1,33 @@
 import unittest
-from auchann.align_words import align_words2
+from auchann.align_words import align_words
 
 
 class TestAlign(unittest.TestCase):
     def test_replace(self):
-        transcript_line = "Sheean is dee man"
-        correction_line = "Sheean is de man"
-        expected_chat_line = "Sheean is dee [: de] man"
+        transcript_line = "doet zij even de armen wes"
+        correction_line = "doet zij even de armen weg"
+        expected_chat_line = "doet zij even de armen wes [: weg]"
 
-        aligned_tokens = align_words2(transcript_line, correction_line)
-        chat_line = ' '.join(object.__str__() for object in aligned_tokens)
-        expected_chat_line = "Sheean is dee [: de] man"
+        alignment = align_words(transcript_line, correction_line)
+        chat_line = ' '.join(str(correction) for correction in alignment.corrections)
         self.assertEqual(chat_line, expected_chat_line)
 
     def test_remove(self):
-        transcript_line = "Sheean is dee beste man"
-        correction_line = "Sheean is de man"
-        expected_chat_line = "Sheean is dee [: de] <beste> [///] man"
+        transcript_line = "alleen dit dit"
+        correction_line = "alleen dit"
+        expected_chat_line = "alleen dit [/] dit"
 
-        aligned_tokens = align_words2(transcript_line, correction_line)
-        chat_line = ' '.join(object.__str__() for object in aligned_tokens)
+        alignment = align_words(transcript_line, correction_line)
+        chat_line = ' '.join(str(correction) for correction in alignment.corrections)
         self.assertEqual(chat_line, expected_chat_line)
 
     def test_insert(self):
-        transcript_line = "Sheean is dee man"
-        correction_line = "Sheean is de beste man"
-        expected_chat_line = "Sheean is dee [: de] 0beste man"
+        transcript_line = "magge zien"
+        correction_line = "mag ik zien"
+        expected_chat_line = "magge [: mag] 0ik zien"
 
-        aligned_tokens = align_words2(transcript_line, correction_line)
-        chat_line = ' '.join(object.__str__() for object in aligned_tokens)
+        alignment = align_words(transcript_line, correction_line)
+        chat_line = ' '.join(str(correction) for correction in alignment.corrections)
         self.assertEqual(chat_line, expected_chat_line)
 
 
