@@ -10,8 +10,7 @@ fillers = [
     'uh',
     'uhm',
     'ggg',
-    'mmm',
-    'xxx'
+    'mmm'
 ]
 
 
