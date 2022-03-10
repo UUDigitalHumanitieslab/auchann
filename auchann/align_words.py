@@ -62,7 +62,8 @@ class TokenCorrection:
 
             # retracing e.g. "gi [//] gingen"
             if self.next is not None and \
-                    self.next.insert is not None and \
+                    self.next.insert and \
+                    self.next.insert[0] is not None and \
                     self.next.insert[0].startswith(remove):
                 return f'{remove} [//]'
             return f'<{remove}> [//]'
