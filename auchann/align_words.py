@@ -1,4 +1,4 @@
-from typing import Iterable, List, Tuple
+from typing import Iterable, List
 from enum import Enum, unique
 from .chat_annotate import correct_parenthesize, fillers
 import editdistance
@@ -29,7 +29,8 @@ class TokenCorrection:
         self.is_filler = operation == TokenOperation.REMOVE and len(
             remove) == 1 and remove[0] in fillers
 
-        self.is_fragment = operation == TokenOperation.REMOVE and len(remove[0]) == 1
+        self.is_fragment = operation == TokenOperation.REMOVE and len(
+            remove[0]) == 1
 
     def __str__(self):
         if self.operation == TokenOperation.COPY:
@@ -42,7 +43,7 @@ class TokenCorrection:
                 return f'&-{remove}'
             if self.is_fragment:
                 return f'&+{remove}'
-            if self.previous == None:
+            if self.previous is None:
                 return f'{remove} [///]'
             else:
                 # repetition e.g. "bah [x 3]"
@@ -60,10 +61,8 @@ class TokenCorrection:
                     return f'[x {repeat}]'
 
             # retracing e.g. "gi [//] gingen"
-            if self.next != None and \
-                    self.next.insert and \
-                    self.next.insert != None and \
-                    self.next.insert is str and \
+            if self.next is not None and \
+                    self.next.insert is not None and \
                     self.next.insert[0].startswith(remove):
                 return f'{remove} [//]'
             return f'<{remove}> [//]'
@@ -100,6 +99,7 @@ class TokenAlignments:
             item.previous = previous
             previous = item
         self.corrections = grouped
+
 
 def align_words(transcript: str, correction: str) -> TokenAlignments:
     transcript_tokens = transcript.split()
