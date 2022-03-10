@@ -110,6 +110,33 @@ class TokenAlignments:
         return ' '.join(str(correction) for correction in self.corrections)
 
 
+distance_hash = {}
+
+
+def calc_distance(a: str, b: str):
+    try:
+        return distance_hash[a][b]
+    except KeyError:
+        pass
+
+    distance = editdistance.distance(a, b)
+
+    # don't allow too strong of an edit distance (prevent gibberish replacement)
+    wordlen = max(len(a), len(b))
+    if distance > 0.5 * wordlen:
+        distance = wordlen
+
+    if a not in distance_hash:
+        distance_hash[a] = {}
+    if b not in distance_hash:
+        distance_hash[b] = {}
+
+    distance_hash[a][b] = distance
+    distance_hash[b][a] = distance
+
+    return distance
+
+
 def align_words(transcript: str, correction: str) -> TokenAlignments:
     transcript_tokens = transcript.split()
     correction_tokens = correction.split()
@@ -156,13 +183,8 @@ def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> 
 
 def align_replace(transcript_tokens: List[str], correction_tokens: List[str]) -> List[TokenAlignments]:
     # OPTION 1: replacement/copy operation
-    distance = editdistance.distance(
+    distance = calc_distance(
         transcript_tokens[0], correction_tokens[0])
-
-    # don't allow too strong of an edit distance (prevent gibberish replacement)
-    wordlen = max(len(transcript_tokens[0]), len(correction_tokens[0]))
-    if distance > 0.5 * wordlen:
-        distance = wordlen
 
     correction = TokenCorrection(
         TokenOperation.COPY if distance == 0 else TokenOperation.REPLACE,
