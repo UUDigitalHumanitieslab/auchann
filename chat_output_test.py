@@ -11,7 +11,7 @@ test_data_path = "CHILDES_Replacement_Data/test_data_abridged.yaml"  # test data
 export_file_path = 'CHILDES_Replacement_Data/test_output.yaml'  # test ouput in yaml format
 
 n_entries = 100
-max_sentence_length = 8
+max_sentence_length = 25
 clean_test_data(chat_data_path, test_data_path, n_entries, max_sentence_length)  # creates a yaml file from the chat data at test_data_path
 
 lines_dict = {'lines': []}  # dict that eventually contains all output
