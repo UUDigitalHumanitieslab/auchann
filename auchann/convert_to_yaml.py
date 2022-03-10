@@ -1,6 +1,6 @@
 import yaml
 import re
-from chamd import ChatReader, cleanCHILDESMD
+from chamd import SpokenLine
 
 # Dictionairy of lines, containing dictionaries of meta and content per line, containing three entries per dictionairy
 # So for each line, create a new dictionairy containing meta and content per line, which you can do in a class?
