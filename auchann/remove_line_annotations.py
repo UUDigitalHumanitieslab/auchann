@@ -29,7 +29,7 @@ def remove_line_annotations(line: str):
         # leave out corrections, guesses, and extra information, which can be spread over several items, hence the correction_status
         elif item[0:2] in ['[:', '[=', '[#', '[%', '[+', '[-']:
             correction_status = True
-        elif correction_status == True:  # if item is part of a correction, leave it out
+        elif correction_status:  # if item is part of a correction, leave it out
             if item[-1] in ["]"]:  # look for end of correction
                 correction_status = False
         elif "@" in item:  # if special form marker, only keep item in front of it

@@ -10,8 +10,7 @@ fillers = [
     'uh',
     'uhm',
     'ggg',
-    'mmm',
-    'xxx'
+    'mmm'
 ]
 
 
@@ -95,7 +94,7 @@ def chat_annotate(transcript_dict, correction_dict):
 
     replacement_queue = []
     for key in transcript_dict:
-        if transcript_dict[key] == False:
+        if transcript_dict[key] is False:
             if key[0] in fillers:
                 CHAT_line.append(str('&-' + key[0]))
             else:
@@ -111,7 +110,7 @@ def chat_annotate(transcript_dict, correction_dict):
                 CHAT_line.append(correction)
 
     for key in correction_dict:
-        if correction_dict[key] == False:
+        if correction_dict[key] is False:
             CHAT_line.insert(key[1], key[0])  # inserts word at corrected index
 
     return(' '.join(CHAT_line))
