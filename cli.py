@@ -6,6 +6,6 @@ try:
         transcript = input("Transcript: ")
         correction = input("Correction: ")
         alignment = align_words(transcript, correction)
-        print(' '.join(str(correction) for correction in alignment.corrections))
+        print(alignment)
 except KeyboardInterrupt:
     pass

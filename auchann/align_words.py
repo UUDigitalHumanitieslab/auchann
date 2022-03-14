@@ -32,6 +32,9 @@ class TokenCorrection:
         self.is_fragment = operation == TokenOperation.REMOVE and len(
             remove[0]) == 1
 
+    def copy(self):
+        return TokenCorrection(self.operation, self.insert.copy(), self.remove.copy())
+
     def __str__(self):
         if self.operation == TokenOperation.COPY:
             return ' '.join(self.insert)
@@ -85,7 +88,9 @@ class TokenAlignments:
         """
         grouped: List[TokenCorrection] = []
         previous = None
-        for item in self.corrections:
+        for item in (item.copy() for item in self.corrections):
+            # the same correction could be in different alignments
+            # modifying it, would also modify those alignments
             if previous is not None:
                 if previous.operation == item.operation and  \
                         not previous.is_filler and \
@@ -101,11 +106,42 @@ class TokenAlignments:
             previous = item
         self.corrections = grouped
 
+    def __str__(self):
+        return ' '.join(str(correction) for correction in self.corrections)
+
+
+distance_hash = {}
+
+
+def calc_distance(a: str, b: str):
+    try:
+        return distance_hash[a][b]
+    except KeyError:
+        pass
+
+    distance = editdistance.distance(a, b)
+
+    # don't allow too strong of an edit distance (prevent gibberish replacement)
+    wordlen = max(len(a), len(b))
+    if distance > 0.5 * wordlen:
+        distance = wordlen
+
+    if a not in distance_hash:
+        distance_hash[a] = {}
+    if b not in distance_hash:
+        distance_hash[b] = {}
+
+    distance_hash[a][b] = distance
+    distance_hash[b][a] = distance
+
+    return distance
+
 
 def align_words(transcript: str, correction: str) -> TokenAlignments:
     transcript_tokens = transcript.split()
     correction_tokens = correction.split()
-    alignments = align_tokens(transcript_tokens, correction_tokens)
+    session = AlignmentSession(transcript_tokens, correction_tokens)
+    alignments = session.align_tokens()
     for alignment in alignments:
         alignment.group()
 
@@ -120,72 +156,85 @@ def prepend_correction(correction: TokenCorrection, distance: int, alignments: I
         yield TokenAlignments([correction] + alignment.corrections, distance + alignment.distance)
 
 
-def align_tokens(transcript_tokens: List[str], correction_tokens: List[str]) -> List[TokenAlignments]:
-    # don't count spaces for the length
-    # otherwise these are penalized (compared with option 1 and 2)
-    if len(transcript_tokens) == 0:
-        if len(correction_tokens) == 0:
-            return [TokenAlignments([], 0)]
-        else:
-            return [TokenAlignments([TokenCorrection(TokenOperation.INSERT, correction_tokens)], len(''.join(correction_tokens)))]
-    elif len(correction_tokens) == 0:
-        return [TokenAlignments([TokenCorrection(TokenOperation.REMOVE, None, transcript_tokens)], len(''.join(transcript_tokens)))]
+class AlignmentSession:
+    def __init__(self, transcript_tokens: List[str], correction_tokens: List[str]):
+        self.transcript_tokens = transcript_tokens
+        self.correction_tokens = correction_tokens
+        self.hash = {}
 
-    # FIND THE MINIMAL DISTANCE
-    alignments = align_replace(transcript_tokens, correction_tokens) + \
-        align_insert(transcript_tokens, correction_tokens) + \
-        align_remove(transcript_tokens, correction_tokens)
+    def align_tokens(self, transcript_offset: int = 0, correction_offset: int = 0) -> List[TokenAlignments]:
+        try:
+            transcript_hash = self.hash[transcript_offset]
+        except KeyError:
+            transcript_hash = {}
+            self.hash[transcript_offset] = transcript_hash
 
-    alignments.sort(key=lambda alignment: alignment.distance)
+        try:
+            return transcript_hash[correction_offset]
+        except KeyError:
+            pass
 
-    min_distance = alignments[0].distance
-    for alignment in list(alignments):
-        if alignment.distance > min_distance:
-            alignments.remove(alignment)
+        alignment = self.__calc_align_tokens(
+            transcript_offset, correction_offset)
+        self.hash[transcript_offset][correction_offset] = alignment
+        return alignment
 
-    return alignments
+    def __calc_align_tokens(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
+        # don't count spaces for the length
+        # otherwise these are penalized (compared with option 1 and 2)
+        if transcript_offset >= len(self.transcript_tokens):
+            if correction_offset >= len(self.correction_tokens):
+                return [TokenAlignments([], 0)]
+            else:
+                return [TokenAlignments([TokenCorrection(TokenOperation.INSERT, self.correction_tokens[correction_offset:])], len(''.join(self.correction_tokens[correction_offset:])))]
+        elif correction_offset >= len(self.correction_tokens):
+            return [TokenAlignments([TokenCorrection(TokenOperation.REMOVE, None, self.transcript_tokens[transcript_offset:])], len(''.join(self.transcript_tokens[transcript_offset:])))]
 
+        # FIND THE MINIMAL DISTANCE
+        alignments = self.align_replace(transcript_offset, correction_offset) + \
+            self.align_insert(transcript_offset, correction_offset) + \
+            self.align_remove(transcript_offset, correction_offset)
 
-def align_replace(transcript_tokens: List[str], correction_tokens: List[str]) -> List[TokenAlignments]:
-    # OPTION 1: replacement/copy operation
-    distance = editdistance.distance(
-        transcript_tokens[0], correction_tokens[0])
+        alignments.sort(key=lambda alignment: alignment.distance)
 
-    # don't allow too strong of an edit distance (prevent gibberish replacement)
-    wordlen = max(len(transcript_tokens[0]), len(correction_tokens[0]))
-    if distance > 0.5 * wordlen:
-        distance = wordlen
+        min_distance = alignments[0].distance
+        for alignment in list(alignments):
+            if alignment.distance > min_distance:
+                alignments.remove(alignment)
 
-    correction = TokenCorrection(
-        TokenOperation.COPY if distance == 0 else TokenOperation.REPLACE,
-        [correction_tokens[0]],
-        [transcript_tokens[0]])
+        return alignments
 
-    alignments = align_tokens(
-        transcript_tokens[1:], correction_tokens[1:])
+    def align_replace(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
+        # OPTION 1: replacement/copy operation
+        distance = calc_distance(
+            self.transcript_tokens[transcript_offset], self.correction_tokens[correction_offset])
 
-    return list(prepend_correction(correction, distance, alignments))
+        correction = TokenCorrection(
+            TokenOperation.COPY if distance == 0 else TokenOperation.REPLACE,
+            [self.correction_tokens[correction_offset]],
+            [self.transcript_tokens[transcript_offset]])
 
+        alignments = self.align_tokens(
+            transcript_offset+1, correction_offset+1)
 
-def align_insert(transcript_tokens: List[str], correction_tokens: List[str]) -> List[TokenAlignments]:
-    # OPTION 2: insert correction token
-    alignment = align_tokens(
-        transcript_tokens, correction_tokens[1:])
-    distance = len(correction_tokens[0])
+        return list(prepend_correction(correction, distance, alignments))
 
-    correction = TokenCorrection(
-        TokenOperation.INSERT, [correction_tokens[0]])
+    def align_insert(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
+        # OPTION 2: insert correction token
+        alignment = self.align_tokens(transcript_offset, correction_offset+1)
+        distance = len(self.correction_tokens[correction_offset])
 
-    return list(prepend_correction(correction, distance, alignment))
+        correction = TokenCorrection(
+            TokenOperation.INSERT, [self.correction_tokens[correction_offset]])
 
+        return list(prepend_correction(correction, distance, alignment))
 
-def align_remove(transcript_tokens: List[str], correction_tokens: List[str]) -> List[TokenAlignments]:
-    # OPTION 3: remove transcript token
-    alignment = align_tokens(
-        transcript_tokens[1:], correction_tokens)
-    distance = len(transcript_tokens[0])
+    def align_remove(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
+        # OPTION 3: remove transcript token
+        alignment = self.align_tokens(transcript_offset+1, correction_offset)
+        distance = len(self.transcript_tokens[transcript_offset])
 
-    correction = TokenCorrection(
-        TokenOperation.REMOVE, None, [transcript_tokens[0]])
+        correction = TokenCorrection(
+            TokenOperation.REMOVE, None, [self.transcript_tokens[transcript_offset]])
 
-    return list(prepend_correction(correction, distance, alignment))
+        return list(prepend_correction(correction, distance, alignment))
