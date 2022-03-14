@@ -32,6 +32,9 @@ class TokenCorrection:
         self.is_fragment = operation == TokenOperation.REMOVE and len(
             remove[0]) == 1
 
+    def copy(self):
+        return TokenCorrection(self.operation, self.insert.copy(), self.remove.copy())
+
     def __str__(self):
         if self.operation == TokenOperation.COPY:
             return ' '.join(self.insert)
@@ -85,7 +88,9 @@ class TokenAlignments:
         """
         grouped: List[TokenCorrection] = []
         previous = None
-        for item in self.corrections:
+        for item in (item.copy() for item in self.corrections):
+            # the same correction could be in different alignments
+            # modifying it, would also modify those alignments
             if previous is not None:
                 if previous.operation == item.operation and  \
                         not previous.is_filler and \
@@ -100,6 +105,9 @@ class TokenAlignments:
             item.previous = previous
             previous = item
         self.corrections = grouped
+
+    def __str__(self):
+        return ' '.join(str(correction) for correction in self.corrections)
 
 
 def align_words(transcript: str, correction: str) -> TokenAlignments:
