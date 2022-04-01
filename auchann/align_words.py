@@ -47,7 +47,7 @@ class TokenCorrection:
             if self.is_fragment:
                 return f'&+{remove}'
             if self.previous is None:
-                return f'{remove} [///]'
+                return f'<{remove}> [//]'  # changed to <> [//] because of chamd test
             else:
                 # repetition e.g. "bah [x 3]"
                 repeat = 1
