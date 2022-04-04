@@ -1,6 +1,8 @@
-from typing import Iterable, List
+from typing import Iterable, List, Tuple
 from enum import Enum, unique
 from .chat_annotate import correct_parenthesize, fillers
+from .replacement_errors import detect_error
+from sastadev.deregularise import correctinflection
 import editdistance
 
 
@@ -20,11 +22,13 @@ class TokenCorrection:
     is_fragment: bool
     previous = None
     next = None
+    errors = None
 
-    def __init__(self, operation: TokenOperation, insert: List[str] = None, remove: List[str] = None):
+    def __init__(self, operation: TokenOperation, insert: List[str] = None, remove: List[str] = None, errors: List[str] = None):
         self.operation = operation
         self.insert = insert or [None]
         self.remove = remove or [None]
+        self.errors = errors or [None]
 
         self.is_filler = operation == TokenOperation.REMOVE and len(
             remove) == 1 and remove[0] in fillers
@@ -33,7 +37,7 @@ class TokenCorrection:
             remove[0]) == 1
 
     def copy(self):
-        return TokenCorrection(self.operation, self.insert.copy(), self.remove.copy())
+        return TokenCorrection(self.operation, self.insert.copy(), self.remove.copy(), self.errors.copy())
 
     def __str__(self):
         if self.operation == TokenOperation.COPY:
@@ -71,8 +75,8 @@ class TokenCorrection:
                 return f'{remove} [//]'
             return f'<{remove}> [//]'
         elif self.operation == TokenOperation.REPLACE:
-            return ' '.join(correct_parenthesize(original, correction)
-                            for (original, correction) in zip(self.remove, self.insert))
+            return ' '.join(correct_parenthesize(original, correction, error)
+                            for (original, correction, error) in zip(self.remove, self.insert, self.errors))
         else:
             return f'UNKNOWN OPERATION {self.operation}'
 
@@ -97,6 +101,7 @@ class TokenAlignments:
                         not item.is_filler:
                     previous.insert += item.insert
                     previous.remove += item.remove
+                    previous.errors += item.errors
                     continue
                 else:
                     previous.next = item
@@ -113,28 +118,39 @@ class TokenAlignments:
 distance_hash = {}
 
 
-def calc_distance(a: str, b: str):
+def calc_distance(original: str, correction: str) -> Tuple[int, str]:
     try:
-        return distance_hash[a][b]
+        return distance_hash[original][correction]
     except KeyError:
         pass
 
-    distance = editdistance.distance(a, b)
+    error = detect_error(original, correction)
+    if error is None:
+        for candidate, candidate_error in correctinflection(original):
+            if candidate == correction:
+                error = candidate_error
+                break
+
+    if error is None:
+        distance = editdistance.distance(original, correction)
+    else:
+        distance = 1
 
     # don't allow too strong of an edit distance (prevent gibberish replacement)
-    wordlen = max(len(a), len(b))
+    wordlen = max(len(original), len(correction))
     if distance > 0.5 * wordlen:
         distance = wordlen
 
-    if a not in distance_hash:
-        distance_hash[a] = {}
-    if b not in distance_hash:
-        distance_hash[b] = {}
+    if original not in distance_hash:
+        distance_hash[original] = {}
+    if correction not in distance_hash:
+        distance_hash[correction] = {}
 
-    distance_hash[a][b] = distance
-    distance_hash[b][a] = distance
+    distance_hash[original][correction] = distance, error
+    if error is None and original not in distance_hash[correction]:
+        distance_hash[correction][original] = distance, None
 
-    return distance
+    return distance, error
 
 
 def align_words(transcript: str, correction: str) -> TokenAlignments:
@@ -206,13 +222,14 @@ class AlignmentSession:
 
     def align_replace(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
         # OPTION 1: replacement/copy operation
-        distance = calc_distance(
+        distance, error = calc_distance(
             self.transcript_tokens[transcript_offset], self.correction_tokens[correction_offset])
 
         correction = TokenCorrection(
             TokenOperation.COPY if distance == 0 else TokenOperation.REPLACE,
             [self.correction_tokens[correction_offset]],
-            [self.transcript_tokens[transcript_offset]])
+            [self.transcript_tokens[transcript_offset]],
+            [error])
 
         alignments = self.align_tokens(
             transcript_offset+1, correction_offset+1)

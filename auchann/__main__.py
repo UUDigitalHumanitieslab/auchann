@@ -11,7 +11,6 @@ from chamd import ChatReader, cleanCHILDESMD
 import re
 import yaml
 from auchann.remove_line_annotations import remove_line_annotations
-from auchann.chat_annotate import chat_annotate
 
 
 class Spokenline:
@@ -41,12 +40,6 @@ class Spokenline:
         """
         # use chamd to clean string to correction, False is to remove repititions, set to True if you want to keep repititions
         self.correction = cleanCHILDESMD.cleantext(self.chat, False)
-
-    def transcript_and_correction_to_chat(self):
-        """
-        Adds CHAT annotation to the raw transcript based on the corrections, returns a CHAT-annotated line
-        """
-        self.CHAT = chat_annotate(self.transcript, self.correction)
 
     def convert_to_dictionary(self):
         """
