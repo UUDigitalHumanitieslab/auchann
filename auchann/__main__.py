@@ -5,13 +5,11 @@ By Mees van Stiphout
 
 from multiprocessing.sharedctypes import Value
 import sys
-import os
 from typing import List
 from chamd import ChatReader, cleanCHILDESMD
-import re
 import yaml
 from auchann.remove_line_annotations import remove_line_annotations
-from auchann.chat_annotate import chat_annotate
+from auchann.correct_parenthesize import chat_annotate
 
 
 class Spokenline:
