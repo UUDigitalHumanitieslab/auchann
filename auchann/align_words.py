@@ -1,6 +1,6 @@
 from typing import Iterable, List
 from enum import Enum, unique
-from .correct_parenthesize import correct_parenthesize, fillers
+from correct_parenthesize import correct_parenthesize, fillers
 import editdistance
 
 
