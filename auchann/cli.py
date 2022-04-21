@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from align_words import align_words
+from auchann.align_words import align_words
 
 try:
     while True:
