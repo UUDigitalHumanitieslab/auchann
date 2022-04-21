@@ -1,12 +1,23 @@
 from setuptools import setup, find_packages
 
+with open('README.md') as file:
+    long_description = file.read()
+
 setup(
     name='auchann',
     version='0.1.0',
     packages=find_packages(include=['auchann', 'auchann.*']),
+    description=('The AuChAnn (Automatic CHAT Annotation) package can generate CHAT annotations based on a transcript-correction pairs of utterances.'),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    license='BSD-3 Clause',
+    author='Digital Humanities Lab, Utrecht University',
+    author_email='digitalhumanities@uu.nl',
+    url='https://github.com/UUDigitalHumanitieslab/auchann',
     install_requires=[
         'chamd',
         'editdistance',
-        'pyyaml-include'
-        ]
+        'pyyaml-include',
+        'typing'
+    ]
 )
