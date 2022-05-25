@@ -1,7 +1,7 @@
 from typing import Iterable, List, Tuple
 from enum import Enum, unique
-from .chat_annotate import correct_parenthesize, fillers
-from .replacement_errors import detect_error
+from auchann.correct_parenthesize import correct_parenthesize, fillers
+from auchann.replacement_errors import detect_error
 from sastadev.deregularise import correctinflection
 import editdistance
 
@@ -63,7 +63,7 @@ class TokenCorrection:
         if self.is_fragment:
             return f'&+{remove}'
         if self.previous is None:
-            return f'{remove} [///]'
+            return f'<{remove}> [//]'  # changed to <> [//] because of chamd test
         else:
             # repetition e.g. "bah [x 3]"
             repeat = 1

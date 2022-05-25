@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-chamd==0.5.4
+chamd==0.5.6
     # via auchann (setup.py)
 editdistance==0.6.0
     # via auchann (setup.py)
