@@ -31,6 +31,13 @@ class TestAlign(unittest.TestCase):
 
         self.assertAlign(transcript_line, correction_line, expected_chat_line)
 
+    def test_error_detection(self):
+        transcript_line = "de meisje slaapte thuis"
+        correction_line = "het meisje sliep thuis"
+        expected_chat_line = "de [: het] [* s:r:gc:art] meisje slaapte [: sliep] [* m] thuis"
+
+        self.assertAlign(transcript_line, correction_line, expected_chat_line)
+
     def assertAlign(self, transcript_line: str, correction_line: str, expected_chat_line: str):
         alignment = align_words(transcript_line, correction_line)
         chat_line = str(alignment)
