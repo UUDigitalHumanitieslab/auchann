@@ -19,5 +19,11 @@ setup(
         'editdistance',
         'pyyaml-include',
         'sastadev'
+    ],
+    zip_safe=True,
+    entry_points={
+        'console_scripts': [
+            'auchann = auchann.__main__:main'
         ]
+    }
 )
