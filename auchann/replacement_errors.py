@@ -10,9 +10,9 @@ pronouns = ['dit', 'dat', 'deze', 'die', 'het', 'zulke', 'degene', 'datgene',
             'ons', 'onze',
             'jij', 'je', 'u', 'julie',
             'hun', 'hen', 'ze']
-prepositions = ['aan', 'achter', 'af', 'behalve', 'beneden', 'bij', 'binnen', 'boven', 'buiten', 'door', 'in', 'langs', 'met', 'na', 'naar',
-                'naast', 'om', 'onder', 'op', 'over', 'per', 'sinds', 'te', 'tegen', 'tot', 'tussen', 'uit', 'van', 'via', 'volgens', 'voor', 'zonder',
-                'erop', 'eraf']
+prepositions = ['aan', 'achter', 'af', 'behalve', 'beneden', 'bij', 'binnen', 'boven', 'buiten', 'door', 'in', 'langs',
+                'met', 'na', 'naar', 'naast', 'om', 'onder', 'op', 'over', 'per', 'sinds', 'te', 'tegen', 'tot',
+                'tussen', 'uit', 'van', 'via', 'volgens', 'voor', 'zonder', 'erop', 'eraf']
 
 
 def detect_error(original: str, correction: str) -> Optional[str]:

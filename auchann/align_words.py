@@ -24,7 +24,11 @@ class TokenCorrection:
     next = None
     errors = None
 
-    def __init__(self, operation: TokenOperation, insert: List[str] = None, remove: List[str] = None, errors: List[str] = None):
+    def __init__(self,
+                 operation: TokenOperation,
+                 insert: List[str] = None,
+                 remove: List[str] = None,
+                 errors: List[str] = None):
         self.operation = operation
         self.insert = insert or [None]
         self.remove = remove or [None]
@@ -45,40 +49,43 @@ class TokenCorrection:
         elif self.operation == TokenOperation.INSERT:
             return ' '.join(f'0{insert}' for insert in self.insert)
         elif self.operation == TokenOperation.REMOVE:
-            remove = ' '.join(self.remove)
-            if self.is_filler:
-                return f'&-{remove}'
-            if self.is_fragment:
-                return f'&+{remove}'
-            if self.previous is None:
-                return f'{remove} [///]'
-            else:
-                # repetition e.g. "bah [x 3]"
-                repeat = 1
-                for token in self.remove:
-                    if self.previous.operation == TokenOperation.COPY and \
-                            self.previous.insert[-1] == token:
-                        repeat += 1
-                    else:
-                        repeat = -1
-                        break
-                if repeat == 2:
-                    return f'[/] {remove}'
-                elif repeat > 2:
-                    return f'[x {repeat}]'
-
-            # retracing e.g. "gi [//] gingen"
-            if self.next is not None and \
-                    self.next.insert and \
-                    self.next.insert[0] is not None and \
-                    self.next.insert[0].startswith(remove):
-                return f'{remove} [//]'
-            return f'<{remove}> [//]'
+            return self.__str__remove()
         elif self.operation == TokenOperation.REPLACE:
             return ' '.join(correct_parenthesize(original, correction, error)
                             for (original, correction, error) in zip(self.remove, self.insert, self.errors))
         else:
             return f'UNKNOWN OPERATION {self.operation}'
+
+    def __str__remove(self):
+        remove = ' '.join(self.remove)
+        if self.is_filler:
+            return f'&-{remove}'
+        if self.is_fragment:
+            return f'&+{remove}'
+        if self.previous is None:
+            return f'{remove} [///]'
+        else:
+            # repetition e.g. "bah [x 3]"
+            repeat = 1
+            for token in self.remove:
+                if self.previous.operation == TokenOperation.COPY and \
+                        self.previous.insert[-1] == token:
+                    repeat += 1
+                else:
+                    repeat = -1
+                    break
+            if repeat == 2:
+                return f'[/] {remove}'
+            elif repeat > 2:
+                return f'[x {repeat}]'
+
+        # retracing e.g. "gi [//] gingen"
+        if self.next is not None and \
+                self.next.insert and \
+                self.next.insert[0] is not None and \
+                self.next.insert[0].startswith(remove):
+            return f'{remove} [//]'
+        return f'<{remove}> [//]'
 
 
 class TokenAlignments:
@@ -167,7 +174,9 @@ def align_words(transcript: str, correction: str) -> TokenAlignments:
     return alignments[0]
 
 
-def prepend_correction(correction: TokenCorrection, distance: int, alignments: Iterable[TokenAlignments]) -> Iterable[TokenAlignments]:
+def prepend_correction(correction: TokenCorrection,
+                       distance: int,
+                       alignments: Iterable[TokenAlignments]) -> Iterable[TokenAlignments]:
     for alignment in alignments:
         yield TokenAlignments([correction] + alignment.corrections, distance + alignment.distance)
 
@@ -202,9 +211,16 @@ class AlignmentSession:
             if correction_offset >= len(self.correction_tokens):
                 return [TokenAlignments([], 0)]
             else:
-                return [TokenAlignments([TokenCorrection(TokenOperation.INSERT, self.correction_tokens[correction_offset:])], len(''.join(self.correction_tokens[correction_offset:])))]
+                return [
+                    TokenAlignments(
+                        [TokenCorrection(
+                            TokenOperation.INSERT, self.correction_tokens[correction_offset:])],
+                        len(''.join(self.correction_tokens[correction_offset:])))]
         elif correction_offset >= len(self.correction_tokens):
-            return [TokenAlignments([TokenCorrection(TokenOperation.REMOVE, None, self.transcript_tokens[transcript_offset:])], len(''.join(self.transcript_tokens[transcript_offset:])))]
+            return [TokenAlignments(
+                [TokenCorrection(TokenOperation.REMOVE, None,
+                                 self.transcript_tokens[transcript_offset:])],
+                len(''.join(self.transcript_tokens[transcript_offset:])))]
 
         # FIND THE MINIMAL DISTANCE
         alignments = self.align_replace(transcript_offset, correction_offset) + \

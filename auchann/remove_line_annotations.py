@@ -24,9 +24,11 @@ def remove_line_annotations(line: str):
             else:
                 pass
         # all single-item markers between brackets
-        elif item in ['[.]', '[?]', '[*]', '[*s]', '[*m]', '[*gram]', '[<]', '[>]', '[!]', '[!!]', '[+bch]', '[/]', '[//]', '[///]']:
+        elif item in ['[.]', '[?]', '[*]', '[*s]', '[*m]', '[*gram]',
+                      '[<]', '[>]', '[!]', '[!!]', '[+bch]', '[/]', '[//]', '[///]']:
             pass
-        # leave out corrections, guesses, and extra information, which can be spread over several items, hence the correction_status
+        # leave out corrections, guesses, and extra information, which can be spread over several items,
+        # hence the correction_status
         elif item[0:2] in ['[:', '[=', '[#', '[%', '[+', '[-']:
             correction_status = True
         elif correction_status:  # if item is part of a correction, leave it out

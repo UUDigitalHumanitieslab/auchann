@@ -1,13 +1,7 @@
-from multiprocessing.sharedctypes import Value
 import sys
 import os
-from typing import List
-from chamd import ChatReader, cleanCHILDESMD
+from chamd import cleanCHILDESMD
 from auchann.remove_line_annotations import remove_line_annotations
-from auchann import __main__
-
-import re
-import yaml
 
 
 """
@@ -53,12 +47,14 @@ def main(args=None):
             if len(args) == 2:
                 export_path = args[1]
         except ValueError:
-            print("Provide between 1 and 2 arguments, as follows: python auchann <path_to_cha_file(s)> <export_path (optional)>")
+            print("Provide between 1 and 2 arguments, as follows:" +
+                  "python auchann <path_to_cha_file(s)> <export_path (optional)>")
 
     # path_to_cha_files = "chafiles/laura02.cha"
     # export_path = "chafiles/og_files/"
     """
-    Users need to specify a path to a folder with cha files or a cha file, and optionally a path for the exported file to be stored
+    Users need to specify a path to a folder with cha files or a cha file, and optionally a path for the exported file
+    to be stored
     Default export path is current directory (os.getcwd())
     """
     if os.path.splitext(path_to_cha_files)[1] == ".cha":  # if it is a single chat file

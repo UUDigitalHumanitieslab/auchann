@@ -64,5 +64,3 @@ export_file_path = 'CHILDES_Replacement_Data/new_CHAT_utterances.yaml'
 
 with open(export_file_path, 'w') as file:
     yaml.dump(lines_dict, file, default_flow_style=False)
-
-    # https://github.com/UUDigitalHumanitieslab/TrEd-bridge/blob/fc56323cd8921724c23b33c63cfa7400e08d909f/functions.py#L200 Look at this for edit distance

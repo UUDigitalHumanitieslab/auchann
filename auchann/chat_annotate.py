@@ -110,7 +110,8 @@ def correct_parenthesize(original: str, correction: str, error_type: str = None)
     """Takes a string and its corrected equivalent.
     Calculates the differences between the two and parenthesizes these.
     Differences with whitespace should be split.
-    Based on TrEd-bridge: https://github.com/UUDigitalHumanitieslab/TrEd-bridge/blob/fc56323cd8921724c23b33c63cfa7400e08d909f/functions.py#L200
+    Based on TrEd-bridge:
+    https://github.com/UUDigitalHumanitieslab/TrEd-bridge/blob/fc56323cd8921724c23b33c63cfa7400e08d909f/functions.py#L200
 
     Returns:
         str: CHAT notation for the correction

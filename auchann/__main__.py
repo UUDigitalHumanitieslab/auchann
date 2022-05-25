@@ -3,19 +3,15 @@ Created on 12-Jan-2022, 13:30
 By Mees van Stiphout
 """""
 
-from multiprocessing.sharedctypes import Value
 import sys
-import os
-from typing import List
-from chamd import ChatReader, cleanCHILDESMD
-import re
+from chamd import cleanCHILDESMD
 import yaml
 from auchann.remove_line_annotations import remove_line_annotations
 
 
 class Spokenline:
     """
-    A class that contains the three versions of the transcript, i.e. the original, the correction, 
+    A class that contains the three versions of the transcript, i.e. the original, the correction,
     and the CHAT-annotated version, as well as some metadata, i.e. speaker, linenr, and corpus.
     Contains a single line/utterance which can be converted to a dictionary to add to a yaml file.
     """
@@ -74,8 +70,9 @@ def main(args=None):
 
     with open(yamlfile, 'r') as file:
         # loads a yaml file that contains a list of dictionaries, one for every line
-        data = yaml.load(file, Loader=yaml.FullLoader)
-        lines = data["lines"]
+        yaml.load(file, Loader=yaml.FullLoader)  # data =
+
+        # lines = data["lines"]
 
 
 if __name__ == "__main__":
