@@ -10,7 +10,7 @@
 pip install auchann
 ```
 
-The program can be run interactively from the console using the command `auchann`.
+The program can be run interactively from the console using the command `auchann` .
 
 ### Import as Library
 
@@ -50,3 +50,7 @@ twine upload dist/*
 ```bash
 python -m unittest discover unit-tests/
 ```
+
+## Acknowledgments
+
+The research for this software was made possible by the CLARIAH-PLUS project financed by NWO (Grant 184.034.023).
