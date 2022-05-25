@@ -11,7 +11,9 @@ fillers = [
     'uh',
     'uhm',
     'ggg',
-    'mmm'
+    'mmm',
+    'ja',
+    'nee'
 ]
 
 

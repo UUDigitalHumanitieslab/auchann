@@ -1,5 +1,5 @@
 import unittest
-from auchann.chat_annotate import correct_parenthesize
+from auchann.correct_parenthesize import correct_parenthesize
 
 
 class TestParenthesize(unittest.TestCase):

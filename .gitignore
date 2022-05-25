@@ -128,11 +128,12 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Folder with chat files
+# Folders with chat files and local tests
 chafiles/
 CHILDES_Replacement_Data/
 OtherMaterials/
 test-local/
+
 
 # Mac DS Store
 .DS_store
