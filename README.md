@@ -37,18 +37,18 @@ Run from console:
 python -m auchann
 ```
 
-## Upload to PyPi
+### Run Tests
+
+```bash
+python -m unittest discover unit-tests/
+```
+
+### Upload to PyPi
 
 ```bash
 pip install pip-tools
 python setup.py sdist
 twine upload dist/*
-```
-
-## Run Tests
-
-```bash
-python -m unittest discover unit-tests/
 ```
 
 ## Acknowledgments
