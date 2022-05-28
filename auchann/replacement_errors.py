@@ -27,3 +27,5 @@ def detect_error(original: str, correction: str) -> Optional[str]:
 
     if original in prepositions and correction in prepositions:
         return 's:r:prep'
+
+    return None

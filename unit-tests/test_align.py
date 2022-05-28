@@ -1,4 +1,4 @@
-from auchann.align_words import align_words
+from auchann.align_words import align_words, align_split
 
 
 def test_replace():
@@ -39,6 +39,35 @@ def test_error_detection():
     expected_chat_line = "de [: het] [* s:r:gc:art] meisje slaapte [: sliep] [* m] thuis"
 
     assertAlign(transcript_line, correction_line, expected_chat_line)
+
+
+def test_split():
+    data = [
+        ("was", "wat is", ["wa", "s"]),
+        ("lama", "laat maar", ["la", "ma"]),
+        ("goege", "goede morgen", ["goe", "ge"]),
+        ("hoest", "hoe is het", ["hoe", "s", "t"]),
+        # no trailing characters
+        ("wast", "wat is", []),
+        ("hoest", "hoe is", []),
+    ]
+
+    for transcript_line, correction_line, expected in data:
+        splits = align_split(transcript_line, correction_line.split(' '))
+        assert splits == expected
+
+
+def test_multi_word():
+    data = [
+        ("das wel vreemd", "dat is wel vreemd", "da(t) (i)s wel vreemd"),
+        ("was de dat nou?", "wat is de dat nou?", "wa(t) (i)s de dat nou?"),
+        ("g ebt dak weet nie oe goe gedaan !",
+         "ge hebt dat ik weet niet hoe goed gedaan !",
+         "g(e) (h)ebt da(t) (i)k weet nie(t) (h)oe goe(d) gedaan !")
+    ]
+
+    for transcript_line, correction_line, expected_chat_line in data:
+        assertAlign(transcript_line, correction_line, expected_chat_line)
 
 
 def assertAlign(transcript_line: str, correction_line: str, expected_chat_line: str):
