@@ -40,7 +40,8 @@ python -m auchann
 ### Run Tests
 
 ```bash
-python -m unittest discover unit-tests/
+pip install pytest
+pytest
 ```
 
 ### Upload to PyPi
