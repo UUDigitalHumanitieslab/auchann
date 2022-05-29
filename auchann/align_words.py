@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, List, Tuple
+from typing import cast, Dict, Iterable, List, Optional, Tuple, Union, overload
 from enum import Enum, unique
 from auchann.correct_parenthesize import correct_parenthesize, fillers
 from auchann.replacement_errors import detect_error
@@ -17,8 +17,8 @@ class TokenOperation(Enum):
 
 
 class TokenCorrection:
-    insert: List[str]
-    remove: List[str]
+    insert: List[Optional[str]]
+    remove: List[Optional[str]]
     operation: TokenOperation
     is_filler: bool
     is_fragment: bool
@@ -28,13 +28,16 @@ class TokenCorrection:
 
     def __init__(self,
                  operation: TokenOperation,
-                 insert: List[str] = None,
-                 remove: List[str] = None,
-                 errors: List[str] = None):
+                 insert: Union[None, List[str], List[Optional[str]]] = None,
+                 remove: Union[None, List[str], List[Optional[str]]] = None,
+                 errors: Union[None, List[str], List[Optional[str]]] = None):
         self.operation = operation
-        self.insert = insert or ([None] * len(remove or []))
-        self.remove = remove or ([None] * len(self.insert))
-        self.errors = errors or ([None] * len(self.insert))
+        self.insert = cast(List[Optional[str]],
+                           insert or ([None] * len(remove or [])))
+        self.remove = cast(List[Optional[str]],
+                           remove or ([None] * len(self.insert)))
+        self.errors = cast(List[Optional[str]],
+                           errors or ([None] * len(self.insert)))
 
         assert len(self.insert) == len(self.remove)
         assert len(self.remove) == len(self.errors)
@@ -128,10 +131,10 @@ class TokenAlignments:
         return ' '.join(str(correction) for correction in self.corrections)
 
 
-distance_hash = {}
+distance_hash: Dict[str, Dict[str, Tuple[int, Optional[str]]]] = {}
 
 
-def calc_distance(original: str, correction: str) -> Tuple[int, str]:
+def calc_distance(original: str, correction: str) -> Tuple[int, Optional[str]]:
     try:
         return distance_hash[original][correction]
     except KeyError:
@@ -141,7 +144,7 @@ def calc_distance(original: str, correction: str) -> Tuple[int, str]:
     if error is None:
         for candidate, candidate_error in correctinflection(original):
             if candidate == correction:
-                error = candidate_error
+                error = cast(str, candidate_error)
                 break
 
     if error is None:
@@ -322,7 +325,7 @@ class AlignmentSession:
 
     def align_split(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
         # OPTION 4: detect split of one word into two words e.g. was -> wat is
-        corrections: List[TokenCorrection] = []
+        corrections: List[TokenAlignments] = []
         for lookahead in split_lookaheads:
             if correction_offset + lookahead > len(self.correction_tokens):
                 break
