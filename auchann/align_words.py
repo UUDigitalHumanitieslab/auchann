@@ -1,4 +1,4 @@
-from typing import cast, Dict, Iterable, List, Optional, Tuple, Union, overload
+from typing import cast, Dict, Iterable, List, Optional, Tuple, Union
 from enum import Enum, unique
 from auchann.correct_parenthesize import correct_parenthesize, fillers
 from auchann.replacement_errors import detect_error
