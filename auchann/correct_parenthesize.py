@@ -1,3 +1,4 @@
+import csv
 import re
 from typing import List, Optional
 
@@ -15,6 +16,12 @@ fillers = [
     'ja',
     'nee'
 ]
+with open('list_of_fragments.csv') as fragfile:
+    reader = csv.reader(fragfile, delimiter=',')
+    fragments = []
+    for line in reader:
+        fragments.append(line[0])
+
 
 chat_errors = {
     'Overgeneralisation': 'm',
