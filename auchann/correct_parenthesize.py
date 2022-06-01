@@ -1,6 +1,7 @@
 import csv
 import re
 from typing import List, Optional
+import os
 
 fillers = [
     'eh',
@@ -16,7 +17,9 @@ fillers = [
     'ja',
     'nee'
 ]
-with open('list_of_fragments.csv') as fragfile:
+
+filepath = os.path.dirname(__file__)
+with open(os.path.join(filepath, 'list_of_fragments.csv')) as fragfile:
     reader = csv.reader(fragfile, delimiter=',')
     fragments = []
     for line in reader:
