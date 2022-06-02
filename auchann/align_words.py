@@ -1,11 +1,24 @@
-from typing import cast, Dict, Iterable, List, Optional, Tuple, Union
+from typing import cast, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from enum import Enum, unique
 from auchann.correct_parenthesize import correct_parenthesize, fillers
-from auchann.replacement_errors import detect_error
+from auchann.replacement_errors import replacement_error
 from sastadev.deregularise import correctinflection
 import editdistance
 
-split_lookaheads = [2, 3]
+chat_errors = {
+    'Overgeneralisation': 'm',
+    'Lacking ge prefix': 'm',
+    'Prefix ge without onset': 'm',
+    'Wrong Overgeneralisation': 'm',
+    'Wrong -en suffix': 'm'
+}
+
+
+def map_error(error_type: str) -> str:
+    try:
+        return chat_errors[error_type]
+    except KeyError:
+        return error_type
 
 
 @unique
@@ -131,48 +144,84 @@ class TokenAlignments:
         return ' '.join(str(correction) for correction in self.corrections)
 
 
-distance_hash: Dict[str, Dict[str, Tuple[int, Optional[str]]]] = {}
+class AlignmentSettings:
+    distance_hash: Dict[str, Dict[str, Tuple[int, Optional[str]]]] = {}
+
+    def __init__(self):
+        self.calc_distance = DefaultAlignmentSettings.calc_distance
+        self.detect_error = DefaultAlignmentSettings.detect_error
+        self.lookahead = DefaultAlignmentSettings.lookahead
+
+    @property
+    def calc_distance(self):
+        def method(original: str, correction: str) -> Tuple[int, Optional[str]]:
+            try:
+                return self.distance_hash[original][correction]
+            except KeyError:
+                pass
+
+            distance, error = self.detect_error(original, correction)
+            if error is None:
+                distance = self.__calc_distance(original, correction)
+
+            if original not in self.distance_hash:
+                self.distance_hash[original] = {}
+            if correction not in self.distance_hash:
+                self.distance_hash[correction] = {}
+
+            self.distance_hash[original][correction] = distance, error
+            if error is None and original not in self.distance_hash[correction]:
+                self.distance_hash[correction][original] = distance, None
+
+            return distance, error
+        return method
+
+    @calc_distance.setter
+    def calc_distance(self, method: Callable[[str, str], Tuple[int, Optional[str]]]):
+        self.__calc_distance = method
+
+    @property
+    def lookahead(self):
+        return self._lookahead
+
+    @lookahead.setter
+    def lookahead(self, value: int):
+        self._lookahead = value
+        self.split_lookaheads = list(i + 2 for i in range(value))
 
 
-def calc_distance(original: str, correction: str) -> Tuple[int, Optional[str]]:
-    try:
-        return distance_hash[original][correction]
-    except KeyError:
-        pass
+class DefaultAlignmentSettings:
+    lookahead = 2
 
-    error = detect_error(original, correction)
-    if error is None:
-        for candidate, candidate_error in correctinflection(original):
-            if candidate == correction:
-                error = cast(str, candidate_error)
-                break
+    @staticmethod
+    def detect_error(original: str, correction: str) -> Tuple[int, str]:
+        error = replacement_error(original, correction)
+        if error is None:
+            for candidate, candidate_error in correctinflection(original):
+                if candidate == correction:
+                    error = map_error(candidate_error)
+        if error is not None:
+            return 1, cast(str, error)
+        else:
+            return 0, None
 
-    if error is None:
+    @staticmethod
+    def calc_distance(original: str, correction: str) -> int:
         distance = editdistance.distance(original, correction)
-    else:
-        distance = 1
 
-    # don't allow too strong of an edit distance (prevent gibberish replacement)
-    wordlen = max(len(original), len(correction))
-    if distance > 0.5 * wordlen:
-        distance = wordlen
+        # don't allow too strong of an edit distance (prevent gibberish replacement)
+        wordlen = max(len(original), len(correction))
+        if distance > 0.5 * wordlen:
+            distance = wordlen
 
-    if original not in distance_hash:
-        distance_hash[original] = {}
-    if correction not in distance_hash:
-        distance_hash[correction] = {}
-
-    distance_hash[original][correction] = distance, error
-    if error is None and original not in distance_hash[correction]:
-        distance_hash[correction][original] = distance, None
-
-    return distance, error
+        return distance
 
 
-def align_words(transcript: str, correction: str) -> TokenAlignments:
+def align_words(transcript: str, correction: str, settings: AlignmentSettings = None) -> TokenAlignments:
     transcript_tokens = transcript.split()
     correction_tokens = correction.split()
-    session = AlignmentSession(transcript_tokens, correction_tokens)
+    session = AlignmentSession(
+        transcript_tokens, correction_tokens, settings or AlignmentSettings())
     alignments = session.align_tokens()
     for alignment in alignments:
         alignment.group()
@@ -231,9 +280,10 @@ def prepend_correction(correction: TokenCorrection,
 
 
 class AlignmentSession:
-    def __init__(self, transcript_tokens: List[str], correction_tokens: List[str]):
+    def __init__(self, transcript_tokens: List[str], correction_tokens: List[str], settings: AlignmentSettings):
         self.transcript_tokens = transcript_tokens
         self.correction_tokens = correction_tokens
+        self.settings = settings
         self.hash: Dict[int, Dict[int, List[TokenAlignments]]] = {}
 
     def align_tokens(self, transcript_offset: int = 0, correction_offset: int = 0) -> List[TokenAlignments]:
@@ -276,7 +326,8 @@ class AlignmentSession:
         alignments = self.align_replace(transcript_offset, correction_offset) + \
             self.align_insert(transcript_offset, correction_offset) + \
             self.align_remove(transcript_offset, correction_offset) + \
-            self.align_split(transcript_offset, correction_offset)
+            self.align_split(transcript_offset, correction_offset,
+                             self.settings.split_lookaheads)
 
         alignments.sort(key=lambda alignment: alignment.distance)
 
@@ -289,7 +340,7 @@ class AlignmentSession:
 
     def align_replace(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
         # OPTION 1: replacement/copy operation
-        distance, error = calc_distance(
+        distance, error = self.settings.calc_distance(
             self.transcript_tokens[transcript_offset], self.correction_tokens[correction_offset])
 
         correction = TokenCorrection(
@@ -323,7 +374,7 @@ class AlignmentSession:
 
         return list(prepend_correction(correction, distance, alignment))
 
-    def align_split(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
+    def align_split(self, transcript_offset: int, correction_offset: int, split_lookaheads: List[int]) -> List[TokenAlignments]:
         # OPTION 4: detect split of one word into two words e.g. was -> wat is
         corrections: List[TokenAlignments] = []
         for lookahead in split_lookaheads:
