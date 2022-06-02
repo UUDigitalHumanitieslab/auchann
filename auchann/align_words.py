@@ -194,7 +194,7 @@ class DefaultAlignmentSettings:
     lookahead = 2
 
     @staticmethod
-    def detect_error(original: str, correction: str) -> Tuple[int, str]:
+    def detect_error(original: str, correction: str) -> Tuple[int, Union[str, None]]:
         error = replacement_error(original, correction)
         if error is None:
             for candidate, candidate_error in correctinflection(original):
@@ -374,7 +374,10 @@ class AlignmentSession:
 
         return list(prepend_correction(correction, distance, alignment))
 
-    def align_split(self, transcript_offset: int, correction_offset: int, split_lookaheads: List[int]) -> List[TokenAlignments]:
+    def align_split(self,
+                    transcript_offset: int,
+                    correction_offset: int,
+                    split_lookaheads: List[int]) -> List[TokenAlignments]:
         # OPTION 4: detect split of one word into two words e.g. was -> wat is
         corrections: List[TokenAlignments] = []
         for lookahead in split_lookaheads:
