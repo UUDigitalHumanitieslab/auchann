@@ -44,7 +44,7 @@ class Replacement:
         self.segments = segments or []
         self.omissions = omissions
 
-    def step(self, offset: int, omitted: str, target: str):
+    def step(self, offset: int, omitted: str, target: Optional[str]):
         try:
             last_segment = self.segments[-1]
         except IndexError:
