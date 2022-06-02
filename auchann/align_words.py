@@ -46,7 +46,7 @@ class TokenCorrection:
             self.remove) == 1 and self.remove[0] in fillers
 
         self.is_fragment = operation == TokenOperation.REMOVE and len(
-            remove) == 1 and remove[0] in fragments
+            self.remove) == 1 and self.remove[0] in fragments
 
     def copy(self):
         return TokenCorrection(self.operation, self.insert.copy(), self.remove.copy(), self.errors.copy())
