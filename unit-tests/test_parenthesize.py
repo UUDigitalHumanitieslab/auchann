@@ -9,7 +9,8 @@ class TestParenthesize(unittest.TestCase):
                 ("gee", "geen", "gee(n)"),
                 ("ga-ga-gaan", "gaan", "\u21ABga-ga\u21ABgaan"),
                 ("es", "eens", "e(en)s"),
-                ("feliteerd", "gefeliciteerd", "(ge)feli(ci)teerd")]
+                ("feliteerd", "gefeliciteerd", "(ge)feli(ci)teerd"),
+                ("feliteer", "gefeliciteerd", "(ge)feli(ci)teer(d)")]
 
         for original, correction, expected in data:
             actual = correct_parenthesize(original, correction)

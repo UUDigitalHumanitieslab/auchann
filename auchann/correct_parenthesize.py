@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Optional
 
 fillers = [
     'eh',
@@ -15,6 +15,14 @@ fillers = [
     'ja',
     'nee'
 ]
+
+chat_errors = {
+    'Overgeneralisation': 'm',
+    'Lacking ge prefix': 'm',
+    'Prefix ge without onset': 'm',
+    'Wrong Overgeneralisation': 'm',
+    'Wrong -en suffix': 'm'
+}
 
 
 class Segment:
@@ -56,11 +64,15 @@ class Replacement:
                 last_segment = Segment(omitted, True)
                 omissions += 1
 
-        if last_segment is None:
-            new_segments.append(Segment(target, False))
+        if target is None:
+            if last_segment:
+                new_segments.append(last_segment)
         else:
-            for segment in last_segment.step(target, False):
-                new_segments.append(segment)
+            if last_segment is None:
+                new_segments.append(Segment(target, False))
+            else:
+                for segment in last_segment.step(target, False):
+                    new_segments.append(segment)
 
         return Replacement(
             self.target_position + offset + 1,
@@ -89,23 +101,41 @@ def is_vowel(char: str) -> bool:
     return char.lower() in ('a', 'e', 'u', 'i', 'o', 'y')
 
 
-def correct_parenthesize(original: str, correction: str) -> str:
-    '''
-    take a string and its corrected equivalent.
-    calculate the differences between the two and parenthesizes these.
-    differences with whitespace should be split.
-    Taken from TrEd-bridge: https://github.com/UUDigitalHumanitieslab/TrEd-bridge/blob/fc56323cd8921724c23b33c63cfa7400e08d909f/functions.py#L200
-    '''
-    ws_pattern = re.compile(r'(\S+)\s+(\S+)')
-    pattern = r'(.*)'
-    replace_pattern = r''
-    i = 1
+def map_error(error_type: str) -> str:
+    try:
+        return chat_errors[error_type]
+    except KeyError:
+        return error_type
 
+
+def correct_parenthesize(original: str, correction: str, error_type: str = None) -> str:
+    """Takes a string and its corrected equivalent.
+    Calculates the differences between the two and parenthesizes these.
+    Differences with whitespace should be split.
+    Based on TrEd-bridge:
+    https://github.com/UUDigitalHumanitieslab/TrEd-bridge/blob/fc56323cd8921724c23b33c63cfa7400e08d909f/functions.py#L200
+
+    Returns:
+        str: CHAT notation for the correction
+    """
+    chat = whitespace_correction(original, correction) or \
+        segment_repetition_correction(original, correction) or \
+        parenthesize_correction(original, correction) or \
+        fallback_correction(original, correction)
+
+    return f'{chat} [* {map_error(error_type)}]' if error_type else chat
+
+
+def whitespace_correction(original: str, correction: str) -> Optional[str]:
     # if there is whitespace in the correction,
     # return [: ] form
     if re.search(r'\s+', correction):
-        return '{} [: {}]'.format(original, correction)
+        return fallback_correction(original, correction)
 
+    return None
+
+
+def segment_repetition_correction(original: str, correction: str) -> Optional[str]:
     # segment repetition e.g. ga-ga-gaan
     segment_repetitions = original.split("-")[:-1]
     if segment_repetitions and \
@@ -114,71 +144,40 @@ def correct_parenthesize(original: str, correction: str) -> str:
         reps = ('-'.join(segment_repetitions))
         return f'\u21AB{reps}\u21AB{correction}'
 
-    # only edits at start or end
-    if original in correction:
-        pattern = r'(.*)({})(.*)'.format(original)
-        replace_pattern = r'(\1)\2(\3)'
-
-        parenthesize = re.sub(pattern, replace_pattern, correction)
-        remove_empty = re.sub(r'\(\)', '', parenthesize)
-        split_whitespace = re.sub(r'\((\S+)(\s+)(\S+)\)',
-                                  r'(\1)\2(\3)', remove_empty)
-        return split_whitespace
-
-    else:
-        pattern = r'(.*)'
-        replace_pattern = r''
-        replacements = [Replacement()]
-        for letter in original:
-            new_replacements = []
-            for replacement in replacements:
-                for offset, target in enumerate(correction[replacement.target_position:]):
-                    if target == letter:
-                        omitted = correction[replacement.target_position:
-                                             replacement.target_position+offset]
-
-                        new_replacements.append(
-                            replacement.step(offset, omitted, target))
-            replacements = new_replacements
-
-        # if the pattern is not in the correction,
-        # a ()-notation is not possible
-        # in this case, return [: ]-notation
-        if not replacements:
-            return '{} [: {}]'.format(original, correction)
-
-        # minimize the number of segments and if multiple solutions exist
-        # maximize for open segments i.e. ending with a vowel
-        return str(sorted(
-            replacements,
-            key=lambda replacement: (replacement.omissions, -replacement.open_segments()))[0])
+    return None
 
 
-def chat_annotate(transcript_dict, correction_dict):
-    global fillers
-    transcript_line = [key[0] for key in transcript_dict]
-    correction_line = [key[0] for key in correction_dict]
-    CHAT_line = []
+def parenthesize_correction(original: str, correction: str) -> Optional[str]:
+    replacements = [Replacement()]
+    for letter in original:
+        new_replacements = []
+        for replacement in replacements:
+            for offset, target in enumerate(correction[replacement.target_position:]):
+                if target == letter:
+                    omitted = correction[replacement.target_position:
+                                         replacement.target_position+offset]
 
-    replacement_queue = []
-    for key in transcript_dict:
-        if transcript_dict[key] is False:
-            if key[0] in fillers:
-                CHAT_line.append(str('&-' + key[0]))
-            else:
-                # TEMPORARY - need to find solution still
-                CHAT_line.append(key[0])
-        else:
-            # if the edit distance is 0, simply append the word
-            if transcript_dict[key][3] == 0:
-                CHAT_line.append(key[0])
-            else:
-                correction = correct_parenthesize(
-                    key[0], transcript_dict[key][1])
-                CHAT_line.append(correction)
+                    new_replacements.append(
+                        replacement.step(offset, omitted, target))
+        replacements = new_replacements
 
-    for key in correction_dict:
-        if correction_dict[key] is False:
-            CHAT_line.insert(key[1], key[0])  # inserts word at corrected index
+    for index, replacement in enumerate(replacements):
+        leftover = correction[replacement.target_position:]
+        if leftover:
+            replacements[index] = replacement.step(0, leftover, None)
 
-    return(' '.join(CHAT_line))
+    # if the pattern is not in the correction,
+    # a ()-notation is not possible
+    if not replacements:
+        return None
+
+    # minimize the number of segments and if multiple solutions exist
+    # maximize for open segments i.e. ending with a vowel
+    return str(sorted(
+        replacements,
+        key=lambda replacement: (replacement.omissions, -replacement.open_segments()))[0])
+
+
+def fallback_correction(original: str, correction: str) -> str:
+    # [: ]-notation
+    return '{} [: {}]'.format(original, correction)

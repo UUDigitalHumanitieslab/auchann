@@ -18,6 +18,6 @@ setup(
         'chamd',
         'editdistance',
         'pyyaml-include',
-        'typing'
-    ]
+        'sastadev'
+        ]
 )
