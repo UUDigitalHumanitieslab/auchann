@@ -7,11 +7,6 @@ from auchann.align_words import align_words
 
 
 def main(args=None):
-    """
-    TODO: how do we want this function to be implemented exactly?
-    Currently this is the same as cli.py
-    """
-
     try:
         while True:
             transcript = input("Transcript: ")
