@@ -1,9 +1,11 @@
-from typing import Iterable, List, Tuple
+from typing import cast, Dict, Iterable, List, Optional, Tuple, Union
 from enum import Enum, unique
 from auchann.correct_parenthesize import correct_parenthesize, fillers, fragments
 from auchann.replacement_errors import detect_error
 from sastadev.deregularise import correctinflection
 import editdistance
+
+split_lookaheads = [2, 3]
 
 
 @unique
@@ -15,8 +17,8 @@ class TokenOperation(Enum):
 
 
 class TokenCorrection:
-    insert: List[str]
-    remove: List[str]
+    insert: List[Optional[str]]
+    remove: List[Optional[str]]
     operation: TokenOperation
     is_filler: bool
     is_fragment: bool
@@ -26,16 +28,22 @@ class TokenCorrection:
 
     def __init__(self,
                  operation: TokenOperation,
-                 insert: List[str] = None,
-                 remove: List[str] = None,
-                 errors: List[str] = None):
+                 insert: Union[None, List[str], List[Optional[str]]] = None,
+                 remove: Union[None, List[str], List[Optional[str]]] = None,
+                 errors: Union[None, List[str], List[Optional[str]]] = None):
         self.operation = operation
-        self.insert = insert or [None]
-        self.remove = remove or [None]
-        self.errors = errors or [None]
+        self.insert = cast(List[Optional[str]],
+                           insert or ([None] * len(remove or [])))
+        self.remove = cast(List[Optional[str]],
+                           remove or ([None] * len(self.insert)))
+        self.errors = cast(List[Optional[str]],
+                           errors or ([None] * len(self.insert)))
+
+        assert len(self.insert) == len(self.remove)
+        assert len(self.remove) == len(self.errors)
 
         self.is_filler = operation == TokenOperation.REMOVE and len(
-            remove) == 1 and remove[0] in fillers
+            self.remove) == 1 and self.remove[0] in fillers
 
         self.is_fragment = operation == TokenOperation.REMOVE and len(
             remove) == 1 and remove[0] in fragments
@@ -63,7 +71,8 @@ class TokenCorrection:
         if self.is_fragment:
             return f'&+{remove}'
         if self.previous is None:
-            return f'<{remove}> [//]'  # changed to <> [//] because of chamd test
+            # changed to <> [//] because of chamd test
+            return f'<{remove}> [//]'
         else:
             # repetition e.g. "bah [x 3]"
             repeat = 1
@@ -122,10 +131,10 @@ class TokenAlignments:
         return ' '.join(str(correction) for correction in self.corrections)
 
 
-distance_hash = {}
+distance_hash: Dict[str, Dict[str, Tuple[int, Optional[str]]]] = {}
 
 
-def calc_distance(original: str, correction: str) -> Tuple[int, str]:
+def calc_distance(original: str, correction: str) -> Tuple[int, Optional[str]]:
     try:
         return distance_hash[original][correction]
     except KeyError:
@@ -135,7 +144,7 @@ def calc_distance(original: str, correction: str) -> Tuple[int, str]:
     if error is None:
         for candidate, candidate_error in correctinflection(original):
             if candidate == correction:
-                error = candidate_error
+                error = cast(str, candidate_error)
                 break
 
     if error is None:
@@ -174,6 +183,46 @@ def align_words(transcript: str, correction: str) -> TokenAlignments:
     return alignments[0]
 
 
+def align_split(transcript: str, corrections: List[str]) -> List[str]:
+    """"
+    Attempts to split a transcript into parts aligned with the corrections.
+    e.g.
+        was -> wat is -> ['wa', 's'] <wa(t) (i)s>
+        hoest -> hoe is het -> ['hoe', 's', 't'] <hoe (i)s (he)t>
+    """
+
+    transcript_i = 0
+    split: List[str] = []
+
+    for i in range(0, len(corrections)):
+        correction_i = 0
+        match_start = -1
+        while transcript_i < len(transcript) and correction_i < len(corrections[i]):
+            t = transcript[transcript_i]
+            c = corrections[i][correction_i]
+            if t == c:
+                if match_start == -1:
+                    # match starts here e.g. was -> ... (i)s
+                    match_start = transcript_i
+                correction_i += 1
+                transcript_i += 1
+            elif match_start >= 0:
+                # it stops here e.g. was -> wa(s) ...
+                break
+            else:
+                # skipped character at the start
+                correction_i += 1
+
+        if match_start == -1:
+            # no match found, abort
+            return []
+
+        split.append(transcript[match_start:transcript_i])
+
+    # failed at the end
+    return split if transcript_i == len(transcript) else []
+
+
 def prepend_correction(correction: TokenCorrection,
                        distance: int,
                        alignments: Iterable[TokenAlignments]) -> Iterable[TokenAlignments]:
@@ -185,7 +234,7 @@ class AlignmentSession:
     def __init__(self, transcript_tokens: List[str], correction_tokens: List[str]):
         self.transcript_tokens = transcript_tokens
         self.correction_tokens = correction_tokens
-        self.hash = {}
+        self.hash: Dict[int, Dict[int, List[TokenAlignments]]] = {}
 
     def align_tokens(self, transcript_offset: int = 0, correction_offset: int = 0) -> List[TokenAlignments]:
         try:
@@ -223,9 +272,11 @@ class AlignmentSession:
                 len(''.join(self.transcript_tokens[transcript_offset:])))]
 
         # FIND THE MINIMAL DISTANCE
+        # align replace multiple
         alignments = self.align_replace(transcript_offset, correction_offset) + \
             self.align_insert(transcript_offset, correction_offset) + \
-            self.align_remove(transcript_offset, correction_offset)
+            self.align_remove(transcript_offset, correction_offset) + \
+            self.align_split(transcript_offset, correction_offset)
 
         alignments.sort(key=lambda alignment: alignment.distance)
 
@@ -271,3 +322,34 @@ class AlignmentSession:
             TokenOperation.REMOVE, None, [self.transcript_tokens[transcript_offset]])
 
         return list(prepend_correction(correction, distance, alignment))
+
+    def align_split(self, transcript_offset: int, correction_offset: int) -> List[TokenAlignments]:
+        # OPTION 4: detect split of one word into two words e.g. was -> wat is
+        corrections: List[TokenAlignments] = []
+        for lookahead in split_lookaheads:
+            if correction_offset + lookahead > len(self.correction_tokens):
+                break
+
+            transcript_token = self.transcript_tokens[transcript_offset]
+            correction_tokens = self.correction_tokens[correction_offset:correction_offset+lookahead]
+            split = align_split(
+                transcript_token,
+                correction_tokens)
+
+            if split:
+                correction = TokenCorrection(
+                    TokenOperation.REPLACE,
+                    correction_tokens,
+                    split)
+
+                alignment = self.align_tokens(
+                    transcript_offset+1, correction_offset+lookahead)
+                distance = sum(len(token)
+                               for token in correction_tokens) - len(transcript_token)
+
+                corrections += prepend_correction(
+                    correction,
+                    distance,
+                    alignment)
+
+        return corrections
