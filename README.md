@@ -16,6 +16,7 @@ CHAT is an annotation convention that was developed for the CHILDES corpus (MacW
 AuChAnn was specifically developed to enhance linguistic data in the form of a transcript and interpretation by a linguist for use with SASTA (https://github.com/UUDigitalHumanitieslab/sasta)
 
 ## Getting Started
+
 You can install AuChAnn using pip:
 ```bash
 pip install auchann
@@ -23,7 +24,7 @@ pip install auchann
 
 When installed, the program can be run interactively from the console using the command `auchann` .
 
-### Import as Library
+## Import as Library
 
 To use AuChAnn in your own python applications, you can import the align_words function from align_words, see below. This is the main functionality of the package.
 
@@ -33,6 +34,29 @@ from auchann.align_words import align_words
 transcript = input("Transcript: ")
 correction = input("Correction: ")
 alignment = align_words(transcript, correction)
+print(alignment)
+```
+
+### Settings
+
+```python
+from auchann.align_words import align_words, AlignmentSettings
+import editdistance
+
+settings = AlignmentSettings()
+# Return the edit distance between the original and correction
+settings.calc_distance = lambda original, correction: editdistance.distance(original, correction)
+# Return an override of the distance and the error type; if error type is None the distance
+# returned will be ignored
+settings.detect_error = lambda original, correction: (1, "s:r:gc:art") if original == "de" and correction == "het" else (0, None)
+# How many words could be split from one?
+# e.g. das -> da(t) (i)s requires a lookahead of 2
+# hoest -> hoe (i)s (he)t requires a lookahead of 3
+settings.lookahead = 5
+
+transcript = input("Transcript: ")
+correction = input("Correction: ")
+alignment = align_words(transcript, correction, settings)
 print(alignment)
 ```
 

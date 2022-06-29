@@ -16,14 +16,6 @@ fillers = [
     'nee'
 ]
 
-chat_errors = {
-    'Overgeneralisation': 'm',
-    'Lacking ge prefix': 'm',
-    'Prefix ge without onset': 'm',
-    'Wrong Overgeneralisation': 'm',
-    'Wrong -en suffix': 'm'
-}
-
 
 class Segment:
     def __init__(self, text: str, is_omission: bool):
@@ -101,13 +93,6 @@ def is_vowel(char: str) -> bool:
     return char.lower() in ('a', 'e', 'u', 'i', 'o', 'y')
 
 
-def map_error(error_type: str) -> str:
-    try:
-        return chat_errors[error_type]
-    except KeyError:
-        return error_type
-
-
 def correct_parenthesize(original: str, correction: str, error_type: str = None) -> str:
     """Takes a string and its corrected equivalent.
     Calculates the differences between the two and parenthesizes these.
@@ -123,7 +108,7 @@ def correct_parenthesize(original: str, correction: str, error_type: str = None)
         parenthesize_correction(original, correction) or \
         fallback_correction(original, correction)
 
-    return f'{chat} [* {map_error(error_type)}]' if error_type else chat
+    return f'{chat} [* {error_type}]' if error_type else chat
 
 
 def whitespace_correction(original: str, correction: str) -> Optional[str]:
