@@ -15,7 +15,7 @@ prepositions = ['aan', 'achter', 'af', 'behalve', 'beneden', 'bij', 'binnen', 'b
                 'tussen', 'uit', 'van', 'via', 'volgens', 'voor', 'zonder', 'erop', 'eraf']
 
 
-def detect_error(original: str, correction: str) -> Optional[str]:
+def replacement_error(original: str, correction: str) -> Optional[str]:
     if original == correction:
         return None
 
