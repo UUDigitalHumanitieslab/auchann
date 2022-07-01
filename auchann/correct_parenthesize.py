@@ -1,29 +1,5 @@
-import csv
 import re
 from typing import List, Optional
-import os
-
-fillers = [
-    'eh',
-    'ehm',
-    'ah',
-    'boe',
-    'hm',
-    'hmm',
-    'uh',
-    'uhm',
-    'ggg',
-    'mmm',
-    'ja',
-    'nee'
-]
-
-filepath = os.path.dirname(__file__)
-with open(os.path.join(filepath, 'list_of_fragments.csv')) as fragfile:
-    reader = csv.reader(fragfile, delimiter=',')
-    fragments = []
-    for line in reader:
-        fragments.append(line[0])
 
 
 class Segment:

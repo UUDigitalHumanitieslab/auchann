@@ -39,21 +39,46 @@ print(alignment)
 
 ### Settings
 
+Various settings can be adjusted. Default values are used for every unchanged property.
+
 ```python
 from auchann.align_words import align_words, AlignmentSettings
 import editdistance
 
 settings = AlignmentSettings()
+
 # Return the edit distance between the original and correction
 settings.calc_distance = lambda original, correction: editdistance.distance(original, correction)
-# Return an override of the distance and the error type; if error type is None the distance
-# returned will be ignored
-settings.detect_error = lambda original, correction: (1, "s:r:gc:art") if original == "de" and correction == "het" else (0, None)
+
+# Return an override of the distance and the error type;
+# if error type is None the distance returned will be ignored
+# Default method detects inflection errors
+settings.detect_error = lambda original, correction: (1, "m") if original == "geloopt" and correction == "liep" else (0, None)
+
 # How many words could be split from one?
 # e.g. das -> da(t) (i)s requires a lookahead of 2
 # hoest -> hoe (i)s (he)t requires a lookahead of 3
 settings.lookahead = 5
 
+# Allow detection of replacements within a group
+# e.g. swapping articles this will then be marked with
+# the specified key
+
+# EXAMPLE:
+# Transcript: de huis
+# Correction: het huis
+# de [: het] [* s:r:gc:art] huis
+settings.replacements = {
+    's:r:gc:art': ['de', 'het', 'een'],
+    's:r:gc:pro': ['dit', 'dat', 'deze'],
+    's:r:prep': ['aan', 'uit']
+}
+
+# Other lists to adjust
+settings.fillers = ['eh', 'hm', 'uh']
+settings.fragments = ['ba', 'to', 'mu']
+
+### Example usage
 transcript = input("Transcript: ")
 correction = input("Correction: ")
 alignment = align_words(transcript, correction, settings)
@@ -62,11 +87,11 @@ print(alignment)
 
 ## How it Works
 
-The align_words function scans the transcript and correction and determines for each token whether a correction token is copied exactly from the transcript, replaces a token from the transcript, is inserted, or whether a transcript token has been omitted. Based on which of these operations has occurred, the function adds the appropriate CHAT annotation to the output string.
+The `align_words` function scans the transcript and correction and determines for each token whether a correction token is copied exactly from the transcript, replaces a token from the transcript, is inserted, or whether a transcript token has been omitted. Based on which of these operations has occurred, the function adds the appropriate CHAT annotation to the output string.
 
 The algorithm uses edit distance to establish which words are replacements of each other, i.e. it links a transcript token to a correction token. Words with the lowest available edit distance are matched together, and based on this match the operations COPY and REPLACE are determined. If two candidates have the same edit distance to a token, word position is used to determine the match. The operations REMOVE and INSERT are established if no suitable match can be found for a transcript and correction token respectively.
 
-In addition to establishing these four operations, the function detects several other properties of the transcript and correction which can be expressed in CHAT. For example, it determines whether a word is a filler or fragment, whether a conjugation error has occurred, or if a pronoun, preposition, or article has been used incorrectly. 
+In addition to establishing these four operations, the function detects several other properties of the transcript and correction which can be expressed in CHAT. For example, it determines whether a word is a filler or fragment, whether a conjugation error has occurred, or if a pronoun, preposition, or article has been used incorrectly.
 
 ## Development
 

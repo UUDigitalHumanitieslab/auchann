@@ -1,7 +1,7 @@
 from typing import cast, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from enum import Enum, unique
-from auchann.correct_parenthesize import correct_parenthesize, fillers, fragments
-from auchann.replacement_errors import replacement_error
+from auchann.correct_parenthesize import correct_parenthesize
+import auchann.data as data
 from sastadev.deregularise import correctinflection
 import editdistance
 
@@ -40,10 +40,12 @@ class TokenCorrection:
     errors = None
 
     def __init__(self,
+                 settings: 'AlignmentSettings',
                  operation: TokenOperation,
                  insert: Union[None, List[str], List[Optional[str]]] = None,
                  remove: Union[None, List[str], List[Optional[str]]] = None,
                  errors: Union[None, List[str], List[Optional[str]]] = None):
+        self.settings = settings
         self.operation = operation
         self.insert = cast(List[Optional[str]],
                            insert or ([None] * len(remove or [])))
@@ -56,13 +58,13 @@ class TokenCorrection:
         assert len(self.remove) == len(self.errors)
 
         self.is_filler = operation == TokenOperation.REMOVE and len(
-            self.remove) == 1 and self.remove[0] in fillers
+            self.remove) == 1 and self.remove[0] in settings.fillers
 
         self.is_fragment = operation == TokenOperation.REMOVE and len(
-            self.remove) == 1 and self.remove[0] in fragments
+            self.remove) == 1 and self.remove[0] in settings.fragments
 
     def copy(self):
-        return TokenCorrection(self.operation, self.insert.copy(), self.remove.copy(), self.errors.copy())
+        return TokenCorrection(self.settings, self.operation, self.insert.copy(), self.remove.copy(), self.errors.copy())
 
     def __str__(self):
         if self.operation == TokenOperation.COPY:
@@ -148,9 +150,33 @@ class AlignmentSettings:
     distance_hash: Dict[str, Dict[str, Tuple[int, Optional[str]]]] = {}
 
     def __init__(self):
-        self.calc_distance = DefaultAlignmentSettings.calc_distance
-        self.detect_error = DefaultAlignmentSettings.detect_error
-        self.lookahead = DefaultAlignmentSettings.lookahead
+        self.lookahead = 2
+        self.replacements = data.replacements
+        self.fillers = data.fillers
+        self.fragments = data.fragments
+
+        def __calc_distance(original: str, correction: str) -> int:
+            distance = editdistance.distance(original, correction)
+
+            # don't allow too strong of an edit distance (prevent gibberish replacement)
+            wordlen = max(len(original), len(correction))
+            if distance > 0.5 * wordlen:
+                distance = wordlen
+
+            return distance
+
+        def __detect_error(original: str, correction: str) -> Tuple[int, Optional[str]]:
+            error = None
+            for candidate, candidate_error in correctinflection(original):
+                if candidate == correction:
+                    error = map_error(candidate_error)
+            if error is not None:
+                return 1, cast(str, error)
+            else:
+                return 0, None
+
+        self.__calc_distance = __calc_distance
+        self.__detect_error = __detect_error
 
     @property
     def calc_distance(self):
@@ -160,7 +186,9 @@ class AlignmentSettings:
             except KeyError:
                 pass
 
-            distance, error = self.detect_error(original, correction)
+            distance, error = self.replacement_error(original, correction)
+            if error is None:
+                distance, error = self.detect_error(original, correction)
             if error is None:
                 distance = self.__calc_distance(original, correction)
 
@@ -177,8 +205,9 @@ class AlignmentSettings:
         return method
 
     @calc_distance.setter
-    def calc_distance(self, method: Callable[[str, str], Tuple[int, Optional[str]]]):
+    def calc_distance(self, method: Callable[[str, str], int]):
         self.__calc_distance = method
+        self.distance_hash = {}
 
     @property
     def lookahead(self):
@@ -188,33 +217,26 @@ class AlignmentSettings:
     def lookahead(self, value: int):
         self._lookahead = value
         self.split_lookaheads = list(i + 2 for i in range(value))
+        self.distance_hash = {}
 
+    @property
+    def detect_error(self):
+        return self.__detect_error
 
-class DefaultAlignmentSettings:
-    lookahead = 2
+    @detect_error.setter
+    def detect_error(self, method: Callable[[str, str], Tuple[int, Optional[str]]]):
+        self.__detect_error = method
+        self.distance_hash = {}
 
-    @staticmethod
-    def detect_error(original: str, correction: str) -> Tuple[int, Union[str, None]]:
-        error = replacement_error(original, correction)
-        if error is None:
-            for candidate, candidate_error in correctinflection(original):
-                if candidate == correction:
-                    error = map_error(candidate_error)
-        if error is not None:
-            return 1, cast(str, error)
-        else:
+    def replacement_error(self, original: str, correction: str) -> Tuple[int, Optional[str]]:
+        if original == correction:
             return 0, None
 
-    @staticmethod
-    def calc_distance(original: str, correction: str) -> int:
-        distance = editdistance.distance(original, correction)
+        for error, items in self.replacements.items():
+            if original in items and correction in items:
+                return 1, error
 
-        # don't allow too strong of an edit distance (prevent gibberish replacement)
-        wordlen = max(len(original), len(correction))
-        if distance > 0.5 * wordlen:
-            distance = wordlen
-
-        return distance
+        return 0, None
 
 
 def align_words(transcript: str, correction: str, settings: AlignmentSettings = None) -> TokenAlignments:
@@ -313,12 +335,17 @@ class AlignmentSession:
                 return [
                     TokenAlignments(
                         [TokenCorrection(
-                            TokenOperation.INSERT, self.correction_tokens[correction_offset:])],
+                            self.settings,
+                            TokenOperation.INSERT,
+                            self.correction_tokens[correction_offset:])],
                         len(''.join(self.correction_tokens[correction_offset:])))]
         elif correction_offset >= len(self.correction_tokens):
             return [TokenAlignments(
-                [TokenCorrection(TokenOperation.REMOVE, None,
-                                 self.transcript_tokens[transcript_offset:])],
+                [TokenCorrection(
+                    self.settings,
+                    TokenOperation.REMOVE,
+                    None,
+                    self.transcript_tokens[transcript_offset:])],
                 len(''.join(self.transcript_tokens[transcript_offset:])))]
 
         # FIND THE MINIMAL DISTANCE
@@ -344,6 +371,7 @@ class AlignmentSession:
             self.transcript_tokens[transcript_offset], self.correction_tokens[correction_offset])
 
         correction = TokenCorrection(
+            self.settings,
             TokenOperation.COPY if distance == 0 else TokenOperation.REPLACE,
             [self.correction_tokens[correction_offset]],
             [self.transcript_tokens[transcript_offset]],
@@ -360,7 +388,9 @@ class AlignmentSession:
         distance = len(self.correction_tokens[correction_offset])
 
         correction = TokenCorrection(
-            TokenOperation.INSERT, [self.correction_tokens[correction_offset]])
+            self.settings,
+            TokenOperation.INSERT,
+            [self.correction_tokens[correction_offset]])
 
         return list(prepend_correction(correction, distance, alignment))
 
@@ -370,7 +400,10 @@ class AlignmentSession:
         distance = len(self.transcript_tokens[transcript_offset])
 
         correction = TokenCorrection(
-            TokenOperation.REMOVE, None, [self.transcript_tokens[transcript_offset]])
+            self.settings,
+            TokenOperation.REMOVE,
+            None,
+            [self.transcript_tokens[transcript_offset]])
 
         return list(prepend_correction(correction, distance, alignment))
 
@@ -392,6 +425,7 @@ class AlignmentSession:
 
             if split:
                 correction = TokenCorrection(
+                    self.settings,
                     TokenOperation.REPLACE,
                     correction_tokens,
                     split)
