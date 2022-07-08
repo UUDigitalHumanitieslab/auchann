@@ -117,9 +117,9 @@ pytest
 ### Upload to PyPi
 
 ```bash
-pip install pip-tools
+pip install pip-tools twine
 python setup.py sdist
-twine upload dist/*
+twine upload dist/*.tar.gz
 ```
 
 ## Acknowledgments
