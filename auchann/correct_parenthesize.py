@@ -1,5 +1,7 @@
+import csv
 import re
 from typing import List, Optional
+import os
 
 
 class Segment:
