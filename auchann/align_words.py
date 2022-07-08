@@ -1,6 +1,6 @@
 from typing import cast, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from enum import Enum, unique
-from auchann.correct_parenthesize import correct_parenthesize, fillers
+from auchann.correct_parenthesize import correct_parenthesize, fillers, fragments
 from auchann.replacement_errors import replacement_error
 from sastadev.deregularise import correctinflection
 import editdistance
@@ -59,7 +59,7 @@ class TokenCorrection:
             self.remove) == 1 and self.remove[0] in fillers
 
         self.is_fragment = operation == TokenOperation.REMOVE and len(
-            self.remove[0] or "") == 1
+            self.remove) == 1 and self.remove[0] in fragments
 
     def copy(self):
         return TokenCorrection(self.operation, self.insert.copy(), self.remove.copy(), self.errors.copy())
