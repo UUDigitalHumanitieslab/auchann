@@ -137,3 +137,5 @@ test-local/
 
 # Mac DS Store
 .DS_store
+
+.vscode/

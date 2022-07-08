@@ -16,11 +16,12 @@ setup(
     author_email='digitalhumanities@uu.nl',
     url='https://github.com/UUDigitalHumanitieslab/auchann',
     install_requires=[
-        'chamd',
+        'chamd>=0.5.8',
         'editdistance',
         'pyyaml-include',
         'sastadev'
     ],
+    python_requires='>=3.7',
     zip_safe=True,
     entry_points={
         'console_scripts': [
