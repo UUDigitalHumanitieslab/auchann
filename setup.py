@@ -20,6 +20,9 @@ setup(
         'editdistance',
         'pyyaml-include'
     ],
+    extras_require={
+        'NL': ['sastadev>=0.03']
+    },
     python_requires='>=3.7',
     zip_safe=True,
     entry_points={

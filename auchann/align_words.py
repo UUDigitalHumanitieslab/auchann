@@ -4,21 +4,6 @@ from auchann.correct_parenthesize import correct_parenthesize
 import auchann.data as data
 import editdistance
 
-chat_errors = {
-    'Overgeneralisation': 'm',
-    'Lacking ge prefix': 'm',
-    'Prefix ge without onset': 'm',
-    'Wrong Overgeneralisation': 'm',
-    'Wrong -en suffix': 'm'
-}
-
-
-def map_error(error_type: str) -> str:
-    try:
-        return chat_errors[error_type]
-    except KeyError:
-        return error_type
-
 
 @unique
 class TokenOperation(Enum):
@@ -164,11 +149,8 @@ class AlignmentSettings:
 
             return distance
 
-        def __detect_error(original: str, correction: str) -> Tuple[int, Optional[str]]:
-            return 0, None
-
         self.__calc_distance = __calc_distance
-        self.__detect_error = __detect_error
+        self.__detect_error = data.detect_error
 
     @property
     def calc_distance(self):

@@ -23,6 +23,13 @@ You can install AuChAnn using pip:
 pip install auchann
 ```
 
+You can also optionally install [Sastadev](https://github.com/UUDigitalHumanitieslab/sastadev)
+which is used for detecting inflection errors.
+
+```bash
+pip install auchann[NL]
+```
+
 When installed, the program can be run interactively from the console using the command `auchann` .
 
 ## Import as Library
