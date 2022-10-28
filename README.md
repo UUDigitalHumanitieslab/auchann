@@ -18,6 +18,7 @@ AuChAnn was specifically developed to enhance linguistic data in the form of a t
 ## Getting Started
 
 You can install AuChAnn using pip:
+
 ```bash
 pip install auchann
 ```
@@ -54,6 +55,10 @@ settings.calc_distance = lambda original, correction: editdistance.distance(orig
 # if error type is None the distance returned will be ignored
 # Default method detects inflection errors
 settings.detect_error = lambda original, correction: (1, "m") if original == "geloopt" and correction == "liep" else (0, None)
+
+### Sastadev contains a helper function for Dutch which detects inflection errors
+from sastadev.deregularise import detect_error
+settings.detect_error = detect_error
 
 # How many words could be split from one?
 # e.g. das -> da(t) (i)s requires a lookahead of 2

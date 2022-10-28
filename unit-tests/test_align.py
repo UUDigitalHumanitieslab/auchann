@@ -1,4 +1,4 @@
-from auchann.align_words import align_words, align_split
+from auchann.align_words import AlignmentSettings, align_words, align_split
 
 
 def test_replace():
@@ -71,6 +71,14 @@ def test_multi_word():
 
 
 def assertAlign(transcript_line: str, correction_line: str, expected_chat_line: str):
-    alignment = align_words(transcript_line, correction_line)
+    settings = AlignmentSettings()
+    def detect_error(original: str, correction: str):
+        if original == "slaapte" and correction == "sliep":
+            return 1, "m"
+        else:
+            return 0, None
+    settings.detect_error = detect_error
+
+    alignment = align_words(transcript_line, correction_line, settings)
     chat_line = str(alignment)
     assert chat_line == expected_chat_line

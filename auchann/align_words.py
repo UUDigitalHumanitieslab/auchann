@@ -2,7 +2,6 @@ from typing import cast, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from enum import Enum, unique
 from auchann.correct_parenthesize import correct_parenthesize
 import auchann.data as data
-from sastadev.deregularise import correctinflection
 import editdistance
 
 chat_errors = {
@@ -166,14 +165,7 @@ class AlignmentSettings:
             return distance
 
         def __detect_error(original: str, correction: str) -> Tuple[int, Optional[str]]:
-            error = None
-            for candidate, candidate_error in correctinflection(original):
-                if candidate == correction:
-                    error = map_error(candidate_error)
-            if error is not None:
-                return 1, cast(str, error)
-            else:
-                return 0, None
+            return 0, None
 
         self.__calc_distance = __calc_distance
         self.__detect_error = __detect_error
@@ -225,6 +217,15 @@ class AlignmentSettings:
 
     @detect_error.setter
     def detect_error(self, method: Callable[[str, str], Tuple[int, Optional[str]]]):
+        """Specify a method to compare a text with a correction which returns
+the desired editing distance and the CHAT error code.
+When no error is returned the returned editing distance will be
+ignored.
+
+Args:
+    method: Callable[[str, str], Tuple[int, Optional[str]]]:
+        (transcribed text, correction) -> (editing distance, error code)
+"""
         self.__detect_error = method
         self.distance_hash = {}
 
