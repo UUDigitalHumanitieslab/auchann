@@ -101,7 +101,7 @@ class TokenAlignments:
         self.corrections = corrections
         self.distance = distance
 
-    def group(self):
+    def group(self) -> None:
         """
         Group corrections spanning multiple tokens
         """
@@ -126,7 +126,7 @@ class TokenAlignments:
             previous = item
         self.corrections = grouped
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ' '.join(str(correction) for correction in self.corrections)
 
 
@@ -222,7 +222,7 @@ Args:
         return 0, None
 
 
-def align_words(transcript: str, correction: str, settings: AlignmentSettings = None) -> TokenAlignments:
+def align_words(transcript: str, correction: str, settings: Optional[AlignmentSettings] = None) -> TokenAlignments:
     transcript_tokens = transcript.split()
     correction_tokens = correction.split()
     session = AlignmentSession(

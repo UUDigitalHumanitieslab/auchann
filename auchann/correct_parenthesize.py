@@ -15,7 +15,7 @@ class Segment:
 
 
 class Replacement:
-    def __init__(self, target_position: int = 0, segments: List[Segment] = None, omissions: int = 0):
+    def __init__(self, target_position: int = 0, segments: Optional[List[Segment]] = None, omissions: int = 0):
         self.__open_segments = None
         self.target_position = target_position
         self.segments = segments or []
@@ -78,7 +78,7 @@ def is_vowel(char: str) -> bool:
     return char.lower() in ('a', 'e', 'u', 'i', 'o', 'y')
 
 
-def correct_parenthesize(original: str, correction: str, error_type: str = None) -> str:
+def correct_parenthesize(original: str, correction: str, error_type: Optional[str] = None) -> str:
     """Takes a string and its corrected equivalent.
     Calculates the differences between the two and parenthesizes these.
     Differences with whitespace should be split.
