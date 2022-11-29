@@ -754,3 +754,11 @@ fragments = ['ə',
              'papap',
              'e>[/]',
              'wawawa']
+
+
+try:
+    from sastadev.deregularise import detect_error  # type: ignore[import]
+
+except ImportError:
+    def detect_error(_: str, __: str):
+        return 0, None

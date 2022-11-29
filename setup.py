@@ -5,7 +5,7 @@ with open('README.md') as file:
 
 setup(
     name='auchann',
-    version='0.1.1',
+    version='0.2.0',
     packages=find_packages(include=['auchann', 'auchann.*']),
     package_data={'auchann': ['py.typed']},
     description='The AuChAnn (Automatic CHAT Annotation) package can generate CHAT annotations based on a transcript-correction pairs of utterances.',
@@ -18,9 +18,11 @@ setup(
     install_requires=[
         'chamd>=0.5.8',
         'editdistance',
-        'pyyaml-include',
-        'sastadev'
+        'pyyaml-include'
     ],
+    extras_require={
+        'NL': ['sastadev>=0.03']
+    },
     python_requires='>=3.7',
     zip_safe=True,
     entry_points={
