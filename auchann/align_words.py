@@ -291,7 +291,7 @@ def align_split(transcript: str, corrections: List[str]) -> List[str]:
 
 
 def prepend_correction(correction: TokenCorrection,
-                       distance: int | float,
+                       distance: Union[int, float],
                        alignments: Iterable[TokenAlignments]) -> Iterable[TokenAlignments]:
     for alignment in alignments:
         yield TokenAlignments([correction] + alignment.corrections, distance + alignment.distance)
