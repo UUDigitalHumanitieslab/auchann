@@ -147,6 +147,7 @@ class AlignmentSettings:
 
     def __init__(self):
         self.lookahead = 2
+        self.split_penalty = False
         self.replacements = data.replacements
         self.fillers = data.fillers
         self.fragments = data.fragments
@@ -349,7 +350,7 @@ class AlignmentSession:
             self.align_insert(transcript_offset, correction_offset) + \
             self.align_remove(transcript_offset, correction_offset) + \
             self.align_split(transcript_offset, correction_offset,
-                             self.settings.split_lookaheads)
+                             self.settings.split_lookaheads, self.settings.split_penalty)
 
         alignments.sort(key=lambda alignment: alignment.distance)
 
@@ -405,7 +406,8 @@ class AlignmentSession:
     def align_split(self,
                     transcript_offset: int,
                     correction_offset: int,
-                    split_lookaheads: List[int]) -> List[TokenAlignments]:
+                    split_lookaheads: List[int],
+                    split_penalty: bool) -> List[TokenAlignments]:
         # OPTION 4: detect split of one word into two words e.g. was -> wat is
         corrections: List[TokenAlignments] = []
         for lookahead in split_lookaheads:
@@ -429,6 +431,8 @@ class AlignmentSession:
                     transcript_offset+1, correction_offset+lookahead)
                 distance = sum(len(token)
                                for token in correction_tokens) - len(transcript_token)
+                if split_penalty:
+                    distance += 0.1
 
                 corrections += prepend_correction(
                     correction,
