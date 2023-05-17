@@ -14,6 +14,17 @@ class TokenOperation(Enum):
 
 
 class TokenCorrection:
+    """Represents a way in which a (group of) token(s) can be represented 
+    in a CHAT annotation.
+
+    Params:
+        insert: token(s) to potentially replace a token or be inserted 
+                in the annotation (derived from correction string)
+        remove: token(s) to potentially be removed or replaced in the 
+                annotation (derived form the transcript string)
+        operation: INSERT, REPLACE, REMOVE, or COPY
+        is_filler/is_fragment: True if removed token is a filler or fragment    
+    """
     insert: List[Optional[str]]
     remove: List[Optional[str]]
     operation: TokenOperation
@@ -64,6 +75,7 @@ class TokenCorrection:
             return f'UNKNOWN OPERATION {self.operation}'
 
     def __str__remove(self):
+        """Adds special annotations for specific remove operations"""
         remove = ' '.join(self.remove)
         if self.is_filler:
             return f'&-{remove}'
