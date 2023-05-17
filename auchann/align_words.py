@@ -147,7 +147,7 @@ class AlignmentSettings:
 
     def __init__(self):
         self.lookahead = 2
-        self.split_penalty = False
+        self.split_penalty = False  # if True, the script will favour an Alignment without a split replacement if distance is equal
         self.replacements = data.replacements
         self.fillers = data.fillers
         self.fragments = data.fragments
