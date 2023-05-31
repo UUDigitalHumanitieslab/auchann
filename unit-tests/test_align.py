@@ -6,7 +6,7 @@ def test_replace():
     correction_line = "doet zij even de armen weg"
     expected_chat_line = "doet zij even de armen wes [: weg]"
 
-    assertAlign(transcript_line, correction_line, expected_chat_line)
+    assert_align(transcript_line, correction_line, expected_chat_line)
 
 
 def test_remove():
@@ -14,15 +14,18 @@ def test_remove():
     correction_line = "alleen dit"
     expected_chat_line = "alleen dit [/] dit"
 
-    assertAlign(transcript_line, correction_line, expected_chat_line)
+    assert_align(transcript_line, correction_line, expected_chat_line)
 
 
 def test_insert():
-    transcript_line = "magge zien"
-    correction_line = "mag ik zien"
-    expected_chat_line = "magge [: mag] 0ik zien"
+    data = [
+        ("magge zien", "mag ik zien", "magge [: mag] 0ik zien"),
+        ("dit is huis", "dit is het huis", "dit is 0het huis"),
+        ("dit is huis ja", "dit is het huis ja", "dit is 0het huis ja")
+    ]
 
-    assertAlign(transcript_line, correction_line, expected_chat_line)
+    for transcript_line, correction_line, expected_chat_line in data:
+        assert_align(transcript_line, correction_line, expected_chat_line)
 
 
 def test_repetition():
@@ -30,7 +33,7 @@ def test_repetition():
     correction_line = "toen kwam hij bij een weiland"
     expected_chat_line = "toen kwam hij bij een [/] een weiland"
 
-    assertAlign(transcript_line, correction_line, expected_chat_line)
+    assert_align(transcript_line, correction_line, expected_chat_line)
 
 
 def test_error_detection():
@@ -38,7 +41,7 @@ def test_error_detection():
     correction_line = "het meisje sliep thuis"
     expected_chat_line = "de [: het] [* s:r:gc:art] meisje slaapte [: sliep] [* m] thuis"
 
-    assertAlign(transcript_line, correction_line, expected_chat_line)
+    assert_align(transcript_line, correction_line, expected_chat_line)
 
 
 def test_split():
@@ -67,10 +70,10 @@ def test_multi_word():
     ]
 
     for transcript_line, correction_line, expected_chat_line in data:
-        assertAlign(transcript_line, correction_line, expected_chat_line)
+        assert_align(transcript_line, correction_line, expected_chat_line)
 
 
-def assertAlign(transcript_line: str, correction_line: str, expected_chat_line: str):
+def assert_align(transcript_line: str, correction_line: str, expected_chat_line: str):
     settings = AlignmentSettings()
     def detect_error(original: str, correction: str):
         if original == "slaapte" and correction == "sliep":
